@@ -32,7 +32,9 @@ export const salesService = {
     useDataStore
       .getState()
       .setSales(
-        list.map((s) => (s.id === id ? { ...s, status: "paid" as const } : s)),
+        list.map((s) =>
+          s.id === id ? { ...s, status: "PENDENTE" as const } : s,
+        ),
       );
   },
 };

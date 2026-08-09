@@ -6,7 +6,7 @@ const methods: PaymentMethod[] = [
   "Cartão de Crédito",
   "Cartão de Débito",
 ];
-const statuses: SaleStatus[] = ["paid", "paid", "paid", "pending"];
+const statuses: SaleStatus[] = ["PAGO", "PAGO", "PAGO", "PENDENTE"];
 
 function daysAgo(n: number) {
   const d = new Date();
@@ -49,7 +49,7 @@ export const mockSales: Sale[] = Array.from({ length: 30 }).map((_, i) => {
     total: Math.round(total * 100) / 100,
     paymentMethod: method,
     status,
-    dueDate: status === "pending" ? daysAhead(7) : undefined,
+    dueDate: status === "PENDENTE" ? daysAhead(7) : undefined,
     notes: "",
   };
 });

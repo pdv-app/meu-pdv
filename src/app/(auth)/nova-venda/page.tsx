@@ -97,7 +97,7 @@ export default function NovaVenda() {
       total,
       paymentMethod: payment,
       status,
-      dueDate: status === "pending" ? dueDate || undefined : undefined,
+      dueDate: status === "PENDENTE" ? dueDate || undefined : undefined,
       notes,
     });
     toast.success("Venda registrada!");
@@ -124,7 +124,7 @@ export default function NovaVenda() {
                   {client.name}
                 </div>
                 <div className="truncate text-xs text-muted-foreground">
-                  {client.whatsapp || client.phone}
+                  {client.phone}
                 </div>
               </div>
               <Button
@@ -438,7 +438,7 @@ export default function NovaVenda() {
                 <div className="mb-3">
                   <Label>Status</Label>
                   <div className="mt-1 grid grid-cols-2 gap-2">
-                    {(["paid", "pending"] as SaleStatus[]).map((s) => (
+                    {(["PAGO", "PENDENTE"] as SaleStatus[]).map((s) => (
                       <button
                         key={s}
                         onClick={() => setStatus(s)}
@@ -449,13 +449,13 @@ export default function NovaVenda() {
                             : "border-border text-muted-foreground",
                         )}
                       >
-                        {s === "paid" ? "Pago" : "Pendente"}
+                        {s === "PAGO" ? "Pago" : "Pendente"}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                {status === "pending" && (
+                {status === "PENDENTE" && (
                   <div className="mb-3 space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
                     <div className="text-sm text-amber-700">
                       Valor pendente:{" "}

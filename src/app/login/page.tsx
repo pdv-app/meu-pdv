@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useUsersStore } from "@/store/useUsersStore";
 import { useRouter } from "next/dist/client/components/navigation";
-import Link from "next/link";
 
 const REMEMBER_KEY = "revenda-remember-email-v1";
 

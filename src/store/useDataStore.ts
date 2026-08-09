@@ -1,9 +1,10 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { Product, Client, Sale } from "@/types";
+import type { Product, Sale } from "@/types";
 import { mockProducts } from "@/mocks/products";
 import { mockClients } from "@/mocks/clients";
 import { mockSales } from "@/mocks/sales";
+import { Client } from "@/prisma/client";
 
 interface DataState {
   products: Product[];

@@ -4,18 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { currency, initials } from "@/lib/format";
-import type { Client } from "@/types";
+import { ClientWithAddress } from "@/types";
 
-// Tipo estendido para receber os valores já calculados da página
-export type ClientTableData = Client & {
+export type ClientTableData = ClientWithAddress & {
   totalSpent: number;
   pendingAmount: number;
 };
 
 export type ClientActions = {
-  onView: (c: Client) => void;
-  onEdit: (c: Client) => void;
-  onDelete: (c: Client) => void;
+  onView: (c: ClientWithAddress) => void;
+  onEdit: (c: ClientWithAddress) => void;
+  onDelete: (c: ClientWithAddress) => void;
 };
 
 export function getClientColumns({
@@ -39,7 +38,7 @@ export function getClientColumns({
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-medium">{c.name}</div>
               <div className="truncate text-xs text-muted-foreground">
-                {c.whatsapp || c.phone}
+                {c.phone}
               </div>
               {/* Info resumida para Mobile (escondida no desktop) */}
               <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground sm:hidden">

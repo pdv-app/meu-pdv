@@ -20,6 +20,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { initials } from "@/lib/format";
+import { Client } from "@/prisma/client";
 
 export function ClientPicker({
   open,
@@ -29,8 +30,8 @@ export function ClientPicker({
 }: {
   open: boolean;
   onClose: () => void;
-  clients: import("@/types").Client[];
-  onPick: (c: import("@/types").Client) => void;
+  clients: Client[];
+  onPick: (c: Client) => void;
 }) {
   const [q, setQ] = useState("");
   const isMobile = useIsMobile();
@@ -71,7 +72,7 @@ export function ClientPicker({
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium">{c.name}</div>
                   <div className="truncate text-xs text-muted-foreground">
-                    {c.whatsapp}
+                    {c.phone}
                   </div>
                 </div>
               </button>

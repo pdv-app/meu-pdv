@@ -46,10 +46,8 @@ import {
   type Permissions,
   type StoreInfo,
 } from "@/store/useSettingsStore";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function ConfiguracoesPage() {
-  const isMobile = useIsMobile();
   return (
     <div className="w-full px-4">
       <StoreSection />

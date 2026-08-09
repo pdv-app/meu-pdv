@@ -1,31 +1,61 @@
-import type { Client } from "@/types";
-import { useDataStore } from "@/store/useDataStore";
+import { Address, Client } from "@/prisma/client";
+import { ClientWithAddress } from "@/types";
 
-const delay = (ms = 120) => new Promise((r) => setTimeout(r, ms));
-const uid = () => "c_" + Math.random().toString(36).slice(2, 10);
+// Atualizamos a tipagem para incluir o address que o formulário envia
+export type ClientPayload = Omit<Client, "id" | "createdAt" | "updatedAt"> & {
+  address?: Address; // ou a tipagem específica AddressData se você tiver exportada
+};
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+
+async function apiRequest<T>(
+  endpoint: string,
+  options?: RequestInit,
+): Promise<T> {
+  const res = await fetch(`${API_URL}${endpoint}`, {
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    ...options,
+  });
+  if (!res.ok) {
+    throw new Error("Erro ao comunicar com o servidor.");
+  }
+  return res.json();
+}
 
 export const clientsService = {
-  async list(): Promise<Client[]> {
-    await delay();
-    return useDataStore.getState().clients;
+  async list(): Promise<ClientWithAddress[]> {
+    return apiRequest<ClientWithAddress[]>("/clients");
   },
-  async create(data: Omit<Client, "id">): Promise<Client> {
-    await delay();
-    const client: Client = { ...data, id: uid() };
-    const list = useDataStore.getState().clients;
-    useDataStore.getState().setClients([client, ...list]);
-    return client;
+
+  async create(data: ClientPayload): Promise<ClientWithAddress> {
+    return apiRequest<ClientWithAddress>("/clients", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   },
-  async update(id: string, data: Partial<Client>): Promise<Client> {
-    await delay();
-    const list = useDataStore.getState().clients;
-    const next = list.map((c) => (c.id === id ? { ...c, ...data } : c));
-    useDataStore.getState().setClients(next);
-    return next.find((c) => c.id === id)!;
+
+  async update(
+    id: string,
+    data: Partial<ClientPayload>,
+  ): Promise<ClientWithAddress> {
+    return apiRequest<ClientWithAddress>(`/clients/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
   },
-  async remove(id: string): Promise<void> {
-    await delay();
-    const list = useDataStore.getState().clients;
-    useDataStore.getState().setClients(list.filter((c) => c.id !== id));
+
+  async remove(id: string) {
+    const response = await fetch(`/api/clients/${id}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      throw new Error("Erro ao remover cliente");
+    }
+
+    // Se for 204 (No Content), não tente ler o .json() pois o corpo está vazio
+    if (response.status === 204) return null;
+
+    return response.json();
   },
 };

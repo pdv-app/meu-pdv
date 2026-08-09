@@ -111,14 +111,14 @@ export default function HistoricoPage() {
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Status</span>
                 <Badge
-                  variant={detail.status === "paid" ? "secondary" : "outline"}
+                  variant={detail.status === "PAGO" ? "secondary" : "outline"}
                   className={
-                    detail.status === "pending"
+                    detail.status === "PENDENTE"
                       ? "border-amber-500/40 text-amber-700"
                       : ""
                   }
                 >
-                  {detail.status === "paid" ? "Pago" : "Pendente"}
+                  {detail.status === "PAGO" ? "Pago" : "Pendente"}
                 </Badge>
               </div>
 

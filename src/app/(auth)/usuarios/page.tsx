@@ -1,14 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  ArrowLeft,
-  Eye,
-  EyeOff,
-  Mail,
-  Pencil,
-  Users as UsersIcon,
-} from "lucide-react";
+import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import {

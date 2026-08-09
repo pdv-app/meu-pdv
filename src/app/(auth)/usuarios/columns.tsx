@@ -1,7 +1,6 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { MoreVertical, Pencil, Settings2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import {

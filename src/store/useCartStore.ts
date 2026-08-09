@@ -1,12 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type {
-  Product,
-  Client,
-  SaleItem,
-  PaymentMethod,
-  SaleStatus,
-} from "@/types";
+import type { Product, SaleItem, PaymentMethod, SaleStatus } from "@/types";
+import { Client } from "@/prisma/client";
 
 export type PdvStep = "cart" | "review" | "payment";
 
@@ -37,7 +32,7 @@ export const useCartStore = create<CartState>()(
       items: [],
       step: "cart",
       payment: "Pix",
-      status: "paid",
+      status: "PAGO",
       dueDate: "",
       notes: "",
       setClient: (c) => set({ client: c }),
@@ -89,7 +84,7 @@ export const useCartStore = create<CartState>()(
           items: [],
           step: "cart",
           payment: "Pix",
-          status: "paid",
+          status: "PAGO",
           dueDate: "",
           notes: "",
         }),

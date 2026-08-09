@@ -220,7 +220,7 @@ export function SaleVoucher({ sale, open, onClose, clientPhone }: Props) {
         </div>
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground">Situação</span>
-          <span>{sale.status === "paid" ? "Pago" : "Pendente"}</span>
+          <span>{sale.status === "PAGO" ? "Pago" : "Pendente"}</span>
         </div>
         {sale.dueDate && (
           <div className="flex items-center justify-between">

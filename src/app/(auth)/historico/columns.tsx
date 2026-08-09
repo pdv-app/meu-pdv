@@ -64,14 +64,14 @@ export function getSaleColumns({
         return (
           <div className="text-right hidden sm:block">
             <Badge
-              variant={s.status === "paid" ? "secondary" : "outline"}
+              variant={s.status === "PAGO" ? "secondary" : "outline"}
               className={
-                s.status === "pending"
+                s.status === "PENDENTE"
                   ? "border-amber-500/40 text-amber-700"
                   : ""
               }
             >
-              {s.status === "paid" ? "Pago" : "Pendente"}
+              {s.status === "PAGO" ? "Pago" : "Pendente"}
             </Badge>
           </div>
         );

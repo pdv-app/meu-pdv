@@ -1,3 +1,5 @@
+import { Prisma } from "@/prisma/client";
+
 export interface Product {
   id: string;
   name: string;
@@ -11,21 +13,21 @@ export interface Product {
   notes?: string;
 }
 
-export interface Client {
-  id: string;
-  name: string;
-  phone: string;
-  whatsapp: string;
-  address: string;
-  notes?: string;
-}
+export type ClientWithAddress = Prisma.ClientGetPayload<{
+  include: { address: true };
+}>;
+
+export type ClientesViewProps = {
+  initialClients: ClientWithAddress[];
+  sales: Sale[];
+};
 
 export type PaymentMethod =
   | "Dinheiro"
   | "Pix"
   | "Cartão de Crédito"
   | "Cartão de Débito";
-export type SaleStatus = "paid" | "pending";
+export type SaleStatus = "PAGO" | "PENDENTE";
 
 export interface SaleItem {
   productId: string;

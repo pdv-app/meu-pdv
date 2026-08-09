@@ -58,10 +58,10 @@ export default function Dashboard() {
 
   const stats = useMemo(() => {
     const soldToday = sales
-      .filter((s) => isToday(s.date) && s.status === "paid")
+      .filter((s) => isToday(s.date) && s.status === "PAGO")
       .reduce((sum, s) => sum + s.total, 0);
     const pending = sales
-      .filter((s) => s.status === "pending")
+      .filter((s) => s.status === "PENDENTE")
       .reduce((sum, s) => sum + s.total, 0);
     const low = products.filter((p) => p.stock <= p.minStock);
     return { soldToday, pending, low };
@@ -156,14 +156,14 @@ export default function Dashboard() {
                     {currency(s.total)}
                   </div>
                   <Badge
-                    variant={s.status === "paid" ? "secondary" : "outline"}
+                    variant={s.status === "PAGO" ? "secondary" : "outline"}
                     className={
-                      s.status === "pending"
+                      s.status === "PENDENTE"
                         ? "border-amber-500/40 text-amber-700"
                         : ""
                     }
                   >
-                    {s.status === "paid" ? "Pago" : "Pendente"}
+                    {s.status === "PAGO" ? "Pago" : "Pendente"}
                   </Badge>
                 </div>
               </div>
