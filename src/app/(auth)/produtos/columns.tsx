@@ -16,19 +16,25 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { currency } from "@/lib/format";
-import type { Product } from "@/types";
+import { Category, Product } from "@/prisma/client";
+
+export type ProductFrontend = Omit<Product, "costPrice" | "salePrice"> & {
+  costPrice: number;
+  salePrice: number;
+  category?: Category | null;
+};
 
 export type ProductActions = {
-  onStock: (p: Product) => void;
-  onEdit: (p: Product) => void;
-  onDelete: (p: Product) => void;
+  onStock: (p: ProductFrontend) => void;
+  onEdit: (p: ProductFrontend) => void;
+  onDelete: (p: ProductFrontend) => void;
 };
 
 export function getProductColumns({
   onStock,
   onEdit,
   onDelete,
-}: ProductActions): ColumnDef<Product>[] {
+}: ProductActions): ColumnDef<ProductFrontend>[] {
   return [
     {
       accessorKey: "name",
@@ -115,7 +121,6 @@ export function getProductColumns({
                 </Popover>
               </div>
             </div>
-
             <div className="mt-0.5 text-xs text-muted-foreground sm:hidden">
               {p.stock} un · {currency(p.salePrice)}
             </div>
@@ -126,12 +131,16 @@ export function getProductColumns({
     {
       accessorKey: "category",
       header: "Categoria",
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {row.original.category}
-        </span>
-      ),
-      filterFn: (row, id, value) => row.getValue(id) === value,
+      cell: ({ row }) => {
+        // LÓGICA DA CATEGORIA: Pegamos o nome direto do objeto populado pelo Prisma
+        return (
+          <span className="text-sm text-muted-foreground">
+            {row.original.category?.name || "Sem categoria"}
+          </span>
+        );
+      },
+      // LÓGICA DO FILTRO: Comparamos pelo nome da categoria aninhada
+      filterFn: (row, id, value) => row.original.category?.name === value,
     },
     {
       accessorKey: "stock",

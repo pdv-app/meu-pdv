@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +42,47 @@ export type ClientFormData = Omit<Client, "id" | "address"> & {
   address: AddressData;
 };
 
+const parseInitialAddress = (addressProp: any): AddressData => {
+  const defaultAddr: AddressData = {
+    street: "",
+    number: "",
+    complement: "",
+    neighborhood: "",
+    city: "",
+    state: "",
+    zipCode: "",
+  };
+
+  if (!addressProp) return defaultAddr;
+
+  if (Array.isArray(addressProp)) {
+    const firstAddress = addressProp[0];
+
+    if (!firstAddress) return defaultAddr;
+
+    return {
+      street: firstAddress.street || "",
+      number: firstAddress.number || "",
+      complement: firstAddress.complement || "",
+      neighborhood: firstAddress.neighborhood || "",
+      city: firstAddress.city || "",
+      state: firstAddress.state || "",
+      zipCode: firstAddress.zipCode || "",
+    };
+  }
+
+  if (typeof addressProp === "string") {
+    try {
+      const parsed = JSON.parse(addressProp);
+      return { ...defaultAddr, ...parsed };
+    } catch {
+      return defaultAddr;
+    }
+  }
+
+  return { ...defaultAddr, ...addressProp };
+};
+
 export function ClientForm({
   open,
   onOpenChange,
@@ -57,55 +98,18 @@ export function ClientForm({
 }) {
   const isMobile = useIsMobile();
 
-  // Função para ler corretamente o endereço vindo do Prisma (array, objeto ou string)
-  const parseInitialAddress = (addressProp: any): AddressData => {
-    const defaultAddr: AddressData = {
-      street: "",
-      number: "",
-      complement: "",
-      neighborhood: "",
-      city: "",
-      state: "",
-      zipCode: "",
-    };
-
-    if (!addressProp) return defaultAddr;
-
-    if (Array.isArray(addressProp)) {
-      const firstAddress = addressProp[0];
-      if (!firstAddress) return defaultAddr;
-      return {
-        street: firstAddress.street || "",
-        number: firstAddress.number || "",
-        complement: firstAddress.complement || "",
-        neighborhood: firstAddress.neighborhood || "",
-        city: firstAddress.city || "",
-        state: firstAddress.state || "",
-        zipCode: firstAddress.zipCode || "",
-      };
-    }
-
-    if (typeof addressProp === "string") {
-      try {
-        const parsed = JSON.parse(addressProp);
-        return { ...defaultAddr, ...parsed };
-      } catch {
-        return defaultAddr;
-      }
-    }
-
-    return { ...defaultAddr, ...addressProp };
-  };
-
-  const getInitialState = (): ClientFormData => ({
-    name: initial?.name || "",
-    phone: initial?.phone || "",
-    email: initial?.email || "",
-    address: parseInitialAddress(initial?.address),
-    notes: initial?.notes || "",
-    createdAt: initial?.createdAt || new Date(),
-    updatedAt: initial?.updatedAt || new Date(),
-  });
+  const getInitialState = useCallback(
+    (): ClientFormData => ({
+      name: initial?.name || "",
+      phone: initial?.phone || "",
+      email: initial?.email || "",
+      address: parseInitialAddress(initial?.address),
+      notes: initial?.notes || "",
+      createdAt: initial?.createdAt || new Date(),
+      updatedAt: initial?.updatedAt || new Date(),
+    }),
+    [initial],
+  );
 
   const [form, setForm] = useState<ClientFormData>(getInitialState());
   const [loading, setLoading] = useState(false);
@@ -161,7 +165,7 @@ export function ClientForm({
     if (open) {
       setForm(getInitialState());
     }
-  }, [open, initial, getInitialState]);
+  }, [open, getInitialState]);
 
   const submit = async () => {
     setLoading(true);

@@ -1,50 +1,60 @@
-import type { Product } from "@/types";
-import { useDataStore } from "@/store/useDataStore";
+import type { ProductFormValues } from "@/lib/validations/product";
 
-const delay = (ms = 120) => new Promise((r) => setTimeout(r, ms));
-const uid = () => "p_" + Math.random().toString(36).slice(2, 10);
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+
+async function apiRequest<T>(
+  endpoint: string,
+  options?: RequestInit,
+): Promise<T> {
+  const res = await fetch(`${API_URL}${endpoint}`, {
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    ...options,
+  });
+
+  if (!res.ok) {
+    throw new Error("Erro ao comunicar com o servidor.");
+  }
+
+  return res.json();
+}
 
 export const productsService = {
-  async list(): Promise<Product[]> {
-    await delay();
-    return useDataStore.getState().products;
+  async list() {
+    return apiRequest("/products");
   },
-  async create(data: Omit<Product, "id">): Promise<Product> {
-    await delay();
-    const product: Product = { ...data, id: uid() };
-    const list = useDataStore.getState().products;
-    useDataStore.getState().setProducts([product, ...list]);
-    return product;
-  },
-  async update(id: string, data: Partial<Product>): Promise<Product> {
-    await delay();
-    const list = useDataStore.getState().products;
-    const next = list.map((p) => (p.id === id ? { ...p, ...data } : p));
-    useDataStore.getState().setProducts(next);
-    return next.find((p) => p.id === id)!;
-  },
-  async remove(id: string): Promise<void> {
-    await delay();
-    const list = useDataStore.getState().products;
-    useDataStore.getState().setProducts(list.filter((p) => p.id !== id));
-  },
-  async addStock(id: string, qty: number): Promise<void> {
-    await delay();
-    const list = useDataStore.getState().products;
-    useDataStore
-      .getState()
-      .setProducts(
-        list.map((p) => (p.id === id ? { ...p, stock: p.stock + qty } : p)),
-      );
-  },
-  async decreaseStockBulk(items: { productId: string; quantity: number }[]) {
-    await delay();
-    const list = useDataStore.getState().products;
-    const next = list.map((p) => {
-      const it = items.find((i) => i.productId === p.id);
-      if (!it) return p;
-      return { ...p, stock: Math.max(0, p.stock - it.quantity) };
+
+  async create(data: ProductFormValues) {
+    return apiRequest("/products", {
+      method: "POST",
+      body: JSON.stringify(data),
     });
-    useDataStore.getState().setProducts(next);
+  },
+
+  async update(id: string, data: Partial<ProductFormValues>) {
+    return apiRequest(`/products/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async remove(id: string) {
+    const response = await fetch(`${API_URL}/products/${id}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      throw new Error("Erro ao remover produto");
+    }
+
+    if (response.status === 204) return null;
+
+    return response.json();
+  },
+
+  async addStock(id: string, qty: number) {
+    return apiRequest(`/products/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ qty }),
+    });
   },
 };

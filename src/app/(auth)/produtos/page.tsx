@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -14,7 +14,7 @@ import {
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
-} from "@/components/ui/drawer"; // Importação do Drawer
+} from "@/components/ui/drawer";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,17 +30,37 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { getProductColumns } from "./columns";
+import { getProductColumns, ProductFrontend } from "./columns";
 import { ProductsDataTable } from "./data-table";
 import { productsService } from "@/services/products.service";
-import { useDataStore } from "@/store/useDataStore";
+import { categoriesService } from "@/services/categories.service";
 import { useIsMobile } from "@/hooks/use-mobile";
-import type { Product } from "@/types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Category } from "@/prisma/client";
+import { Loader2 } from "lucide-react";
 
-type FormState = Omit<Product, "id">;
-const empty: FormState = {
+// 1. Estado do Formulário usa NUMBER agora, compatível com frontend
+export type FormState = {
+  name: string;
+  categoryId: string;
+  description: string;
+  costPrice: number;
+  salePrice: number;
+  stock: number;
+  minStock: number;
+  notes: string;
+};
+
+// 2. Variável que estava faltando
+const emptyForm: FormState = {
   name: "",
-  category: "",
+  categoryId: "",
   description: "",
   costPrice: 0,
   salePrice: 0,
@@ -50,15 +70,42 @@ const empty: FormState = {
 };
 
 export default function ProdutosPage() {
-  const products = useDataStore((s) => s.products);
-  const [editing, setEditing] = useState<Product | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [stockDialog, setStockDialog] = useState<Product | null>(null);
-  const [deleting, setDeleting] = useState<Product | null>(null);
+  const [products, setProducts] = useState<ProductFrontend[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const categories = useMemo(
-    () => Array.from(new Set(products.map((p) => p.category))).sort(),
-    [products],
+  const [editing, setEditing] = useState<ProductFrontend | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [stockDialog, setStockDialog] = useState<ProductFrontend | null>(null);
+  const [deleting, setDeleting] = useState<ProductFrontend | null>(null);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setLoading(true);
+
+        const [fetchedProducts, fetchedCategories] = await Promise.all([
+          productsService.list(),
+          categoriesService.list(),
+        ]);
+
+        setProducts(fetchedProducts as ProductFrontend[]);
+        setCategories(fetchedCategories);
+      } catch (error) {
+        toast.error("Erro ao carregar dados dos produtos.");
+        console.error("Erro ao carregar produtos ou categorias:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, []);
+
+  // Extrai apenas os nomes para alimentar o filtro do Data-table
+  const categoryNames = useMemo(
+    () => categories.map((c) => c.name).sort(),
+    [categories],
   );
 
   const columns = useMemo(
@@ -71,12 +118,21 @@ export default function ProdutosPage() {
     [],
   );
 
+  if (loading) {
+    return (
+      <div className="flex h-[60vh] w-full flex-col items-center justify-center gap-4 text-muted-foreground">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm font-medium">Carregando dados dos produtos...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full px-4">
       <ProductsDataTable
         columns={columns}
         data={products}
-        categories={categories}
+        categories={categoryNames}
         onCreateClick={() => setCreating(true)}
       />
 
@@ -89,23 +145,97 @@ export default function ProdutosPage() {
             setEditing(null);
           }
         }}
-        initial={editing ?? empty}
+        initial={
+          editing
+            ? {
+                name: editing.name,
+                categoryId: editing.categoryId,
+                description: editing.description || "",
+                costPrice: editing.costPrice,
+                salePrice: editing.salePrice,
+                stock: editing.stock,
+                minStock: editing.minStock,
+                notes: editing.notes || "",
+              }
+            : emptyForm
+        }
         isEdit={!!editing}
+        categories={categories}
         onSubmit={async (data) => {
-          if (editing) {
-            await productsService.update(editing.id, data);
-            toast.success("Produto atualizado");
-          } else {
-            await productsService.create(data);
-            toast.success("Produto cadastrado");
+          try {
+            if (editing) {
+              const updatedProduct = (await productsService.update(
+                editing.id,
+                data,
+              )) as ProductFrontend;
+
+              setProducts((prev) =>
+                prev.map((product) =>
+                  product.id === editing.id
+                    ? { ...product, ...updatedProduct }
+                    : product,
+                ),
+              );
+
+              toast.success("Produto atualizado com sucesso!");
+            } else {
+              const newProduct = (await productsService.create(
+                data,
+              )) as ProductFrontend;
+
+              setProducts((prev) => [newProduct, ...prev]);
+
+              toast.success("Produto cadastrado com sucesso!");
+            }
+
+            setCreating(false);
+            setEditing(null);
+          } catch (error) {
+            const message =
+              error instanceof Error
+                ? error.message
+                : "Ocorreu um erro inesperado.";
+
+            toast.error(message);
           }
-          setCreating(false);
-          setEditing(null);
         }}
       />
 
-      <StockEntry product={stockDialog} onClose={() => setStockDialog(null)} />
-      <DeleteProduct product={deleting} onClose={() => setDeleting(null)} />
+      <StockEntry
+        product={stockDialog}
+        onClose={() => setStockDialog(null)}
+        onSuccess={(updatedProduct) => {
+          setProducts((prev) =>
+            prev.map((product) =>
+              product.id === updatedProduct.id
+                ? { ...product, ...updatedProduct }
+                : product,
+            ),
+          );
+        }}
+      />
+
+      <DeleteProduct
+        product={deleting}
+        onClose={() => setDeleting(null)}
+        onConfirm={async (id) => {
+          try {
+            await productsService.remove(id);
+
+            setProducts((prev) => prev.filter((product) => product.id !== id));
+
+            toast.success("Produto removido com sucesso!");
+            setDeleting(null);
+          } catch (error) {
+            const message =
+              error instanceof Error
+                ? error.message
+                : "Erro ao remover produto.";
+
+            toast.error(message);
+          }
+        }}
+      />
     </div>
   );
 }
@@ -113,28 +243,32 @@ export default function ProdutosPage() {
 function DeleteProduct({
   product,
   onClose,
+  onConfirm,
 }: {
-  product: Product | null;
+  product: ProductFrontend | null;
   onClose: () => void;
+  onConfirm: (id: string) => Promise<void>;
 }) {
   return (
-    <AlertDialog open={!!product} onOpenChange={(o) => !o && onClose()}>
+    <AlertDialog open={!!product} onOpenChange={(open) => !open && onClose()}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Remover produto?</AlertDialogTitle>
+
           <AlertDialogDescription>
             {product?.name} será removido do catálogo. Esta ação não pode ser
             desfeita.
           </AlertDialogDescription>
         </AlertDialogHeader>
+
         <AlertDialogFooter>
           <AlertDialogCancel>Cancelar</AlertDialogCancel>
+
           <AlertDialogAction
             onClick={async () => {
               if (!product) return;
-              await productsService.remove(product.id);
-              toast.success("Produto removido");
-              onClose();
+
+              await onConfirm(product.id);
             }}
           >
             Remover
@@ -148,17 +282,21 @@ function DeleteProduct({
 function StockEntry({
   product,
   onClose,
+  onSuccess,
 }: {
-  product: Product | null;
+  product: ProductFrontend | null;
   onClose: () => void;
+  onSuccess: (product: ProductFrontend) => void;
 }) {
   const [qty, setQty] = useState(1);
+
   return (
-    <Dialog open={!!product} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open={!!product} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Entrada de estoque</DialogTitle>
         </DialogHeader>
+
         {product && (
           <div className="space-y-3">
             <div className="text-sm text-muted-foreground">
@@ -167,8 +305,10 @@ function StockEntry({
               </span>{" "}
               — atual: {product.stock}
             </div>
+
             <div className="space-y-2">
               <Label>Quantidade a adicionar</Label>
+
               <Input
                 type="number"
                 min={1}
@@ -178,17 +318,36 @@ function StockEntry({
             </div>
           </div>
         )}
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>
+
           <Button
             onClick={async () => {
               if (!product || qty <= 0) return;
-              await productsService.addStock(product.id, qty);
-              toast.success(`+${qty} un adicionados`);
-              setQty(1);
-              onClose();
+
+              try {
+                const updatedProduct = await productsService.addStock(
+                  product.id,
+                  qty,
+                );
+
+                onSuccess(updatedProduct as ProductFrontend);
+
+                toast.success(`+${qty} un adicionados`);
+
+                setQty(1);
+                onClose();
+              } catch (error) {
+                const message =
+                  error instanceof Error
+                    ? error.message
+                    : "Erro ao adicionar estoque.";
+
+                toast.error(message);
+              }
             }}
           >
             Adicionar
@@ -204,12 +363,14 @@ function ProductForm({
   onOpenChange,
   initial,
   isEdit,
+  categories, // Declarado nas props
   onSubmit,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   initial: FormState;
   isEdit: boolean;
+  categories: Category[];
   onSubmit: (data: FormState) => Promise<void>;
 }) {
   const isMobile = useIsMobile();
@@ -219,7 +380,6 @@ function ProductForm({
   const update = (k: keyof FormState, v: string | number) =>
     setForm((f) => ({ ...f, [k]: v }));
 
-  // 1. Extrair os campos do formulário para não duplicar código
   const FormFields = (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <div className="sm:col-span-2 space-y-2">
@@ -229,13 +389,28 @@ function ProductForm({
           onChange={(e) => update("name", e.target.value)}
         />
       </div>
+
       <div className="sm:col-span-2 space-y-2">
         <Label>Categoria</Label>
-        <Input
-          value={form.category}
-          onChange={(e) => update("category", e.target.value)}
-        />
+        <Select
+          value={form.categoryId}
+          onValueChange={(value) => update("categoryId", value as string)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione uma categoria">
+              {categories.find((c) => c.id === form.categoryId)?.name}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {categories.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
+
       <div className="sm:col-span-2 space-y-2">
         <Label>Estoque atual</Label>
         <Input
@@ -289,14 +464,13 @@ function ProductForm({
     </div>
   );
 
-  // 2. Extrair os botões de ação
   const ActionButtons = (
     <div className="flex w-full justify-between gap-2">
       <Button variant="outline" onClick={() => onOpenChange(false)}>
         Cancelar
       </Button>
       <Button
-        disabled={busy || !form.name.trim()}
+        disabled={busy || !form.name.trim() || !form.categoryId}
         onClick={async () => {
           setBusy(true);
           try {
@@ -311,25 +485,21 @@ function ProductForm({
     </div>
   );
 
-  // 3. Renderização Mobile (Drawer Bottom)
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerContent className="h-screen">
-          {/* Header fixo */}
           <DrawerHeader className="shrink-0 px-4">
             <DrawerTitle>
               {isEdit ? "Editar produto" : "Novo produto"}
             </DrawerTitle>
           </DrawerHeader>
 
-          {/* Container flexível para o scroll */}
           <div className="flex min-h-0 flex-1 flex-col px-4 pb-6">
             <ScrollArea className="flex-1 **:data-radix-scroll-area-thumb:hidden">
               {FormFields}
             </ScrollArea>
 
-            {/* Footer fixo separado por uma borda */}
             <div className="shrink-0 pt-4 border-t border-border">
               {ActionButtons}
             </div>
@@ -339,7 +509,6 @@ function ProductForm({
     );
   }
 
-  // 4. Renderização Desktop (Modal Padrão)
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">

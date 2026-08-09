@@ -35,19 +35,21 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import type { Product } from "@/types";
+import { ProductFrontend } from "./columns";
+
+interface ProductsDataTableProps {
+  columns: ColumnDef<ProductFrontend>[];
+  data: ProductFrontend[];
+  categories: string[];
+  onCreateClick: () => void;
+}
 
 export function ProductsDataTable({
   columns,
   data,
   categories,
   onCreateClick,
-}: {
-  columns: ColumnDef<Product>[];
-  data: Product[];
-  categories: string[];
-  onCreateClick: () => void;
-}) {
+}: ProductsDataTableProps) {
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -63,10 +65,11 @@ export function ProductsDataTable({
       const term = String(value).trim().toLowerCase();
       if (!term) return true;
       const p = row.original;
-      return (
+
+      return Boolean(
         p.name.toLowerCase().includes(term) ||
-        p.category.toLowerCase().includes(term) ||
-        p.description.toLowerCase().includes(term)
+        p.category?.name.toLowerCase().includes(term) ||
+        p.description?.toLowerCase().includes(term),
       );
     },
     getCoreRowModel: getCoreRowModel(),
