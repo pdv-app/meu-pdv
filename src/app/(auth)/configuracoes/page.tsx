@@ -44,7 +44,6 @@ import {
   type ActionKey,
   type ModuleKey,
   type Permissions,
-  type StoreInfo,
 } from "@/store/useSettingsStore";
 import {
   createAccessGroup,
@@ -52,6 +51,8 @@ import {
   getAccessGroups,
   updateAccessGroup,
 } from "@/services/accessGroup.service";
+import { createLoja, getLoja, updateLoja } from "@/services/loja.service";
+import { LojaFormData, lojaSchema } from "@/lib/validations/loja";
 
 export default function ConfiguracoesPage() {
   return (
@@ -63,19 +64,109 @@ export default function ConfiguracoesPage() {
 }
 
 function StoreSection() {
-  const store = useSettingsStore((s) => s.store);
-  const setStore = useSettingsStore((s) => s.setStore);
-  const [form, setForm] = useState<StoreInfo>(store);
+  const [lojaId, setLojaId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    setForm(store);
-  }, [store]);
+  const defaultForm: LojaFormData = {
+    name: "",
+    ownerName: "",
+    document: "",
+    phone: "",
+    email: "",
+    active: true,
+  };
 
-  const update = <K extends keyof StoreInfo>(k: K, v: StoreInfo[K]) =>
+  const [form, setForm] = useState<LojaFormData>(defaultForm);
+  // Guardamos o estado original para habilitar/desabilitar o botão de Salvar e Cancelar
+  const [original, setOriginal] = useState<LojaFormData>(defaultForm);
+
+  useEffect(() => {
+    async function fetchStoreData() {
+      try {
+        setLoading(true);
+        const data = await getLoja();
+
+        if (data && (data as { id?: string }).id) {
+          setLojaId((data as { id?: string }).id ?? null);
+
+          const storeData = {
+            name: data.name || "",
+            ownerName: data.ownerName || "",
+            document: data.document || "",
+            phone: data.phone || "",
+            email: data.email || "",
+            active: data.active ?? true,
+          };
+
+          setForm(storeData);
+          setOriginal(storeData);
+        }
+      } catch (error: any) {
+        // Ignora erros de "Não encontrado" (404), pois é o comportamento esperado na primeira vez.
+        // Se a sua API retorna um status HTTP, você pode usar: if (error.status !== 404)
+        if (!error.message?.toLowerCase().includes("não encontrada")) {
+          console.error(error);
+          toast.error("Erro ao carregar dados da loja");
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchStoreData();
+  }, []);
+
+  const update = <K extends keyof LojaFormData>(k: K, v: LojaFormData[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
-  const dirty = JSON.stringify(form) !== JSON.stringify(store);
+  const dirty = JSON.stringify(form) !== JSON.stringify(original);
+
+  // O botão só será habilitado se houve mudança, não estiver salvando e os campos obrigatórios estiverem preenchidos
+  const canSave =
+    dirty && !busy && form.name.trim() !== "" && form.ownerName.trim() !== "";
+
+  const handleSave = async () => {
+    // 1. Validação do Zod
+    const parsed = lojaSchema.safeParse(form);
+
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0]?.message || "Dados inválidos");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      // 2. Persistência via API (Create ou Update)
+      if (lojaId) {
+        await updateLoja(lojaId, parsed.data);
+        toast.success("Dados da loja atualizados com sucesso");
+      } else {
+        const novaLoja = await createLoja(parsed.data);
+        // Salvamos o novo ID retornado pela API para que os próximos envios sejam um "Update"
+        setLojaId((novaLoja as { id: string }).id);
+        toast.success("Loja cadastrada com sucesso");
+      }
+
+      // 3. Atualiza o estado original para refletir a nova base de dados salva
+      setOriginal(form);
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || "Erro ao salvar os dados da loja");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card className="mb-4">
+        <CardContent className="p-8 text-center text-sm text-muted-foreground">
+          Carregando dados da loja...
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="mb-4">
@@ -87,7 +178,7 @@ function StoreSection() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="sm:col-span-2 flex flex-col gap-2">
+          <div className="flex flex-col gap-2 sm:col-span-2">
             <Label>Nome da loja *</Label>
             <Input
               value={form.name}
@@ -96,23 +187,24 @@ function StoreSection() {
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label>Responsável</Label>
+            <Label>Responsável *</Label>
             <Input
               value={form.ownerName}
               onChange={(e) => update("ownerName", e.target.value)}
+              placeholder="Nome do responsável"
             />
           </div>
           <div className="flex flex-col gap-2">
             <Label>Documento (CNPJ/CPF)</Label>
             <Input
-              value={form.document}
+              value={form.document || ""}
               onChange={(e) => update("document", e.target.value)}
             />
           </div>
           <div className="flex flex-col gap-2">
             <Label>Telefone</Label>
             <Input
-              value={form.phone}
+              value={form.phone || ""}
               onChange={(e) => update("phone", e.target.value)}
             />
           </div>
@@ -120,32 +212,23 @@ function StoreSection() {
             <Label>E-mail</Label>
             <Input
               type="email"
-              value={form.email}
+              value={form.email || ""}
               onChange={(e) => update("email", e.target.value)}
             />
           </div>
         </div>
+
         <div className="flex justify-end gap-2">
           <Button
             variant="outline"
             disabled={!dirty || busy}
-            onClick={() => setForm(store)}
+            onClick={() => setForm(original)}
           >
             Cancelar
           </Button>
-          <Button
-            disabled={!dirty || busy || !form.name.trim()}
-            onClick={async () => {
-              setBusy(true);
-              try {
-                setStore(form);
-                toast.success("Dados da loja salvos");
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            <Save className="mr-1 h-4 w-4" /> Salvar
+          <Button disabled={!canSave} onClick={handleSave}>
+            <Save className="mr-1 h-4 w-4" />
+            {busy ? "Salvando..." : lojaId ? "Salvar alterações" : "Criar loja"}
           </Button>
         </div>
       </CardContent>

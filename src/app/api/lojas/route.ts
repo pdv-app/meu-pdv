@@ -1,0 +1,41 @@
+import { NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+
+export async function GET() {
+  try {
+    // Busca a primeira loja cadastrada (ideal para configurações globais)
+    const loja = await prisma.loja.findFirst();
+
+    if (!loja) {
+      return NextResponse.json(
+        { message: "Loja não encontrada" },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.json(loja);
+  } catch (error) {
+    console.error("Erro ao buscar loja:", error);
+    return NextResponse.json(
+      { message: "Erro interno do servidor" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const loja = await prisma.loja.create({
+      data: body,
+    });
+
+    return NextResponse.json(loja);
+  } catch (error) {
+    console.error("Erro ao criar loja:", error);
+    return NextResponse.json(
+      { message: "Erro interno do servidor" },
+      { status: 500 },
+    );
+  }
+}
