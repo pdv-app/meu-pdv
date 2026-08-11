@@ -90,7 +90,7 @@ export default function ProdutosPage() {
         ]);
 
         setProducts(fetchedProducts as ProductFrontend[]);
-        setCategories(fetchedCategories);
+        setCategories(fetchedCategories as Category[]);
       } catch (error) {
         toast.error("Erro ao carregar dados dos produtos.");
         console.error("Erro ao carregar produtos ou categorias:", error);
@@ -363,7 +363,7 @@ function ProductForm({
   onOpenChange,
   initial,
   isEdit,
-  categories, // Declarado nas props
+  categories,
   onSubmit,
 }: {
   open: boolean;
@@ -377,7 +377,13 @@ function ProductForm({
   const [form, setForm] = useState<FormState>(initial);
   const [busy, setBusy] = useState(false);
 
-  const update = (k: keyof FormState, v: string | number) =>
+  // Atualização segura para aceitar string temporariamente no input e converter para número
+  const updateNumber = (k: keyof FormState, v: string) => {
+    const num = v === "" ? 0 : Number(v);
+    setForm((f) => ({ ...f, [k]: isNaN(num) ? 0 : num }));
+  };
+
+  const updateString = (k: keyof FormState, v: string) =>
     setForm((f) => ({ ...f, [k]: v }));
 
   const FormFields = (
@@ -386,7 +392,7 @@ function ProductForm({
         <Label>Nome</Label>
         <Input
           value={form.name}
-          onChange={(e) => update("name", e.target.value)}
+          onChange={(e) => updateString("name", e.target.value)}
         />
       </div>
 
@@ -394,7 +400,7 @@ function ProductForm({
         <Label>Categoria</Label>
         <Select
           value={form.categoryId}
-          onValueChange={(value) => update("categoryId", value as string)}
+          onValueChange={(value) => updateString("categoryId", value as string)}
         >
           <SelectTrigger>
             <SelectValue placeholder="Selecione uma categoria">
@@ -415,8 +421,9 @@ function ProductForm({
         <Label>Estoque atual</Label>
         <Input
           type="number"
-          value={form.stock}
-          onChange={(e) => update("stock", Number(e.target.value))}
+          value={form.stock === 0 ? "" : form.stock}
+          onChange={(e) => updateNumber("stock", e.target.value)}
+          placeholder="0"
         />
       </div>
       <div className="sm:col-span-2 space-y-2">
@@ -424,8 +431,9 @@ function ProductForm({
         <Input
           type="number"
           step="0.01"
-          value={form.costPrice}
-          onChange={(e) => update("costPrice", Number(e.target.value))}
+          value={form.costPrice === 0 ? "" : form.costPrice}
+          onChange={(e) => updateNumber("costPrice", e.target.value)}
+          placeholder="0.00"
         />
       </div>
       <div className="sm:col-span-2 space-y-2">
@@ -433,16 +441,18 @@ function ProductForm({
         <Input
           type="number"
           step="0.01"
-          value={form.salePrice}
-          onChange={(e) => update("salePrice", Number(e.target.value))}
+          value={form.salePrice === 0 ? "" : form.salePrice}
+          onChange={(e) => updateNumber("salePrice", e.target.value)}
+          placeholder="0.00"
         />
       </div>
       <div className="sm:col-span-2 space-y-2">
         <Label>Estoque mínimo</Label>
         <Input
           type="number"
-          value={form.minStock}
-          onChange={(e) => update("minStock", Number(e.target.value))}
+          value={form.minStock === 0 ? "" : form.minStock}
+          onChange={(e) => updateNumber("minStock", e.target.value)}
+          placeholder="0"
         />
       </div>
       <div className="sm:col-span-2 space-y-2">
@@ -450,7 +460,7 @@ function ProductForm({
         <Textarea
           rows={2}
           value={form.description}
-          onChange={(e) => update("description", e.target.value)}
+          onChange={(e) => updateString("description", e.target.value)}
         />
       </div>
       <div className="sm:col-span-2 space-y-2">
@@ -458,7 +468,7 @@ function ProductForm({
         <Textarea
           rows={2}
           value={form.notes ?? ""}
-          onChange={(e) => update("notes", e.target.value)}
+          onChange={(e) => updateString("notes", e.target.value)}
         />
       </div>
     </div>

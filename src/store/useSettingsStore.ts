@@ -8,7 +8,7 @@ export type ModuleKey =
   | "clientes"
   | "historico";
 
-export type ActionKey = "view" | "create" | "edit" | "delete";
+export type ActionKey = "Visualizar" | "Adicionar" | "Editar" | "Excluir";
 
 export interface ModuleDef {
   key: ModuleKey;
@@ -20,43 +20,43 @@ export const MODULES: ModuleDef[] = [
   {
     key: "dashboard",
     label: "Dashboard",
-    actions: [{ key: "view", label: "Visualizar" }],
+    actions: [{ key: "Visualizar", label: "Visualizar" }],
   },
   {
     key: "produtos",
     label: "Produtos",
     actions: [
-      { key: "view", label: "Visualizar" },
-      { key: "create", label: "Adicionar" },
-      { key: "edit", label: "Editar" },
-      { key: "delete", label: "Excluir" },
+      { key: "Visualizar", label: "Visualizar" },
+      { key: "Adicionar", label: "Adicionar" },
+      { key: "Editar", label: "Editar" },
+      { key: "Excluir", label: "Excluir" },
     ],
   },
   {
     key: "nova-venda",
     label: "Nova Venda",
     actions: [
-      { key: "view", label: "Visualizar" },
-      { key: "create", label: "Registrar venda" },
+      { key: "Visualizar", label: "Visualizar" },
+      { key: "Adicionar", label: "Registrar venda" },
     ],
   },
   {
     key: "clientes",
     label: "Clientes",
     actions: [
-      { key: "view", label: "Visualizar" },
-      { key: "create", label: "Adicionar" },
-      { key: "edit", label: "Editar" },
-      { key: "delete", label: "Excluir" },
+      { key: "Visualizar", label: "Visualizar" },
+      { key: "Adicionar", label: "Adicionar" },
+      { key: "Editar", label: "Editar" },
+      { key: "Excluir", label: "Excluir" },
     ],
   },
   {
     key: "historico",
     label: "Histórico",
     actions: [
-      { key: "view", label: "Visualizar" },
-      { key: "edit", label: "Editar" },
-      { key: "delete", label: "Excluir" },
+      { key: "Visualizar", label: "Visualizar" },
+      { key: "Editar", label: "Editar" },
+      { key: "Excluir", label: "Excluir" },
     ],
   },
 ];
@@ -143,11 +143,11 @@ const defaultGroups: AccessGroup[] = [
     description: "Pode registrar vendas e consultar produtos e clientes.",
     active: true,
     permissions: {
-      dashboard: ["view"],
-      produtos: ["view"],
-      "nova-venda": ["view", "create"],
-      clientes: ["view", "create"],
-      historico: ["view"],
+      dashboard: ["Visualizar"],
+      produtos: ["Visualizar"],
+      "nova-venda": ["Visualizar", "Adicionar"],
+      clientes: ["Visualizar", "Adicionar"],
+      historico: ["Visualizar"],
     },
     createdAt: new Date().toISOString(),
   },

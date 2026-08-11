@@ -46,6 +46,12 @@ import {
   type Permissions,
   type StoreInfo,
 } from "@/store/useSettingsStore";
+import {
+  createAccessGroup,
+  deleteAccessGroup,
+  getAccessGroups,
+  updateAccessGroup,
+} from "@/services/accessGroup.service";
 
 export default function ConfiguracoesPage() {
   return (
@@ -148,11 +154,53 @@ function StoreSection() {
 }
 
 function GroupsSection() {
-  const groups = useSettingsStore((s) => s.groups);
-  const removeGroup = useSettingsStore((s) => s.removeGroup);
-  const toggleGroup = useSettingsStore((s) => s.toggleGroup);
+  const [groups, setGroups] = useState<AccessGroup[]>([]);
+  const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<AccessGroup | null>(null);
   const [creating, setCreating] = useState(false);
+
+  const fetchGroups = async () => {
+    try {
+      setLoading(true);
+      const data = await getAccessGroups();
+      setGroups(data as AccessGroup[]);
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao carregar grupos de acesso");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchGroups();
+  }, []);
+
+  const handleToggleActive = async (group: AccessGroup) => {
+    try {
+      const updated = await updateAccessGroup(group.id, {
+        active: !group.active,
+      });
+      setGroups(
+        groups.map((g) => (g.id === group.id ? (updated as AccessGroup) : g)),
+      );
+      toast.success("Status do grupo atualizado");
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || "Erro ao atualizar status");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteAccessGroup(id);
+      setGroups(groups.filter((g) => g.id !== id));
+      toast.success("Grupo removido com sucesso");
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || "Erro ao remover grupo");
+    }
+  };
 
   return (
     <Card>
@@ -170,94 +218,95 @@ function GroupsSection() {
         </Button>
       </CardHeader>
       <CardContent className="space-y-2">
-        {groups.length === 0 && (
+        {loading ? (
+          <div className="p-8 text-center text-sm text-muted-foreground">
+            Carregando grupos...
+          </div>
+        ) : groups.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
             Nenhum grupo cadastrado.
           </div>
-        )}
-        {groups.map((g) => {
-          const total = totalPermissions(g.permissions);
-          return (
-            <div
-              key={g.id}
-              className="flex flex-col gap-3 rounded-xl border border-border/70 p-3 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="truncate text-sm font-medium">{g.name}</div>
-                  <Badge
-                    variant="outline"
-                    className={
-                      g.active
-                        ? "border-emerald-500/40 text-emerald-700"
-                        : "border-muted-foreground/30 text-muted-foreground"
-                    }
+        ) : (
+          groups.map((g) => {
+            const total = totalPermissions(g.permissions as Permissions);
+            return (
+              <div
+                key={g.id}
+                className="flex flex-col gap-3 rounded-xl border border-border/70 p-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="truncate text-sm font-medium">{g.name}</div>
+                    <Badge
+                      variant="outline"
+                      className={
+                        g.active
+                          ? "border-emerald-500/40 text-emerald-700"
+                          : "border-muted-foreground/30 text-muted-foreground"
+                      }
+                    >
+                      {g.active ? "Ativo" : "Inativo"}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {total} permiss{total === 1 ? "ão" : "ões"}
+                    </span>
+                  </div>
+                  {g.description && (
+                    <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                      {g.description}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 self-end sm:self-auto">
+                  <div className="flex items-center gap-2 pr-2">
+                    <Switch
+                      checked={g.active}
+                      onCheckedChange={() => handleToggleActive(g)}
+                      aria-label="Ativar grupo"
+                    />
+                  </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8"
+                    onClick={() => setEditing(g)}
+                    aria-label="Editar"
                   >
-                    {g.active ? "Ativo" : "Inativo"}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {total} permiss{total === 1 ? "ão" : "ões"}
-                  </span>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger
+                      render={
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      }
+                    ></AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Remover grupo?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {g.name} será removido. Esta ação não pode ser
+                          desfeita.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDelete(g.id)}>
+                          Remover
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
-                {g.description && (
-                  <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
-                    {g.description}
-                  </p>
-                )}
               </div>
-              <div className="flex items-center gap-2 self-end sm:self-auto">
-                <div className="flex items-center gap-2 pr-2">
-                  <Switch
-                    checked={g.active}
-                    onCheckedChange={() => toggleGroup(g.id)}
-                    aria-label="Ativar grupo"
-                  />
-                </div>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8"
-                  onClick={() => setEditing(g)}
-                  aria-label="Editar"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger
-                    render={
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    }
-                  ></AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Remover grupo?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {g.name} será removido. Esta ação não pode ser desfeita.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => {
-                          removeGroup(g.id);
-                          toast.success("Grupo removido");
-                        }}
-                      >
-                        Remover
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </CardContent>
 
       <GroupForm
@@ -269,6 +318,7 @@ function GroupsSection() {
             setEditing(null);
           }
         }}
+        onSuccess={fetchGroups}
       />
     </Card>
   );
@@ -296,14 +346,15 @@ function GroupForm({
   open,
   initial,
   onOpenChange,
+  onSuccess,
 }: {
   open: boolean;
   initial: AccessGroup | null;
   onOpenChange: (o: boolean) => void;
+  onSuccess: () => void;
 }) {
-  const addGroup = useSettingsStore((s) => s.addGroup);
-  const updateGroup = useSettingsStore((s) => s.updateGroup);
   const [form, setForm] = useState<FormData>(emptyForm);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -311,9 +362,9 @@ function GroupForm({
         initial
           ? {
               name: initial.name,
-              description: initial.description,
+              description: initial.description || "",
               active: initial.active,
-              permissions: { ...initial.permissions },
+              permissions: { ...(initial.permissions as Permissions) },
             }
           : emptyForm,
       );
@@ -349,29 +400,39 @@ function GroupForm({
     [form.permissions],
   );
 
-  const submit = () => {
+  const submit = async () => {
     if (!form.name.trim()) {
       toast.error("Informe o nome do grupo");
       return;
     }
-    if (isEdit && initial) {
-      updateGroup(initial.id, {
-        name: form.name.trim(),
-        description: form.description.trim(),
-        active: form.active,
-        permissions: form.permissions,
-      });
-      toast.success("Grupo atualizado");
-    } else {
-      addGroup({
-        name: form.name.trim(),
-        description: form.description.trim(),
-        active: form.active,
-        permissions: form.permissions,
-      });
-      toast.success("Grupo criado");
+
+    try {
+      setSaving(true);
+      if (isEdit && initial) {
+        await updateAccessGroup(initial.id, {
+          name: form.name.trim(),
+          description: form.description.trim(),
+          active: form.active,
+          permissions: form.permissions,
+        });
+        toast.success("Grupo atualizado com sucesso");
+      } else {
+        await createAccessGroup({
+          name: form.name.trim(),
+          description: form.description.trim(),
+          active: form.active,
+          permissions: form.permissions,
+        });
+        toast.success("Grupo criado com sucesso");
+      }
+      onSuccess();
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || "Erro ao salvar grupo");
+    } finally {
+      setSaving(false);
     }
-    onOpenChange(false);
   };
 
   return (
@@ -495,11 +556,15 @@ function GroupForm({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+          >
             Cancelar
           </Button>
-          <Button onClick={submit} disabled={!form.name.trim()}>
-            {isEdit ? "Salvar" : "Criar grupo"}
+          <Button onClick={submit} disabled={!form.name.trim() || saving}>
+            {saving ? "Salvando..." : isEdit ? "Salvar" : "Criar grupo"}
           </Button>
         </DialogFooter>
       </DialogContent>

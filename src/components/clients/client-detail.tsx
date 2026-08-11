@@ -157,7 +157,7 @@ export default function ClientDetail({
   // Renderização Desktop (Sheet Lateral Padrão)
   return (
     <Sheet open={!!client} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md">
+      <SheetContent side="right" className="w-full flex flex-col sm:max-w-md">
         <SheetHeader>
           <SheetTitle>{client.name}</SheetTitle>
         </SheetHeader>
