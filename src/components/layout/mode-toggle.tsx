@@ -6,11 +6,15 @@ import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export function ModeToggle({ className }: { className?: string }) {
+export function ModeToggle({
+  className,
+  title,
+}: {
+  className?: string;
+  title?: boolean;
+}) {
   const { setTheme, resolvedTheme } = useTheme();
 
-  // Usamos o resolvedTheme para garantir que funcione mesmo se o usuário
-  // estiver com a opção "Sistema" selecionada no tema.
   const isDark = resolvedTheme === "dark";
 
   const toggleTheme = () => {
@@ -27,19 +31,22 @@ export function ModeToggle({ className }: { className?: string }) {
       <Sun
         className={`h-[1.2rem] w-[1.2rem] transition-all duration-500 ease-in-out ${
           isDark
-            ? "scale-0 rotate-90 translate-y-4 opacity-0" // Sai: encolhe, gira, desce e some
-            : "scale-100 rotate-0 translate-y-0 opacity-100" // Entra: tamanho normal, volta ao centro
+            ? "scale-0 rotate-90 translate-y-4 opacity-0"
+            : "scale-100 rotate-0 translate-y-0 opacity-100"
         }`}
       />
       <Moon
         className={`absolute h-[1.2rem] w-[1.2rem] transition-all duration-500 ease-in-out ${
           isDark
-            ? "scale-100 rotate-0 translate-y-0 opacity-100" // Entra: tamanho normal, centraliza
-            : "scale-0 -rotate-90 -translate-y-4 opacity-0" // Sai: encolhe, gira no sentido inverso, sobe e some
+            ? "scale-100 rotate-0 translate-y-0 opacity-100"
+            : "scale-0 -rotate-90 -translate-y-4 opacity-0"
         }`}
       />
-
-      <span className="sr-only">Alternar tema</span>
+      {isDark ? (
+        <span className={`${title ? "" : "sr-only"}`}>Tema claro</span>
+      ) : (
+        <span className={`${title ? "" : "sr-only"}`}>Tema escuro</span>
+      )}
     </Button>
   );
 }

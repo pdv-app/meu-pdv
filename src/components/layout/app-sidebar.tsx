@@ -14,10 +14,11 @@ import {
 import { NAV, SECONDARY_NAV } from "@/lib/navigation-data";
 import { Handbag, LogOut } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
+  const router = useRouter();
 
   const isActive = (to: string) =>
     to === "/" ? pathname === "/" : pathname.startsWith(to);
@@ -88,16 +89,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   variant="outline"
-                  render={
-                    <Link
-                      href="/logout"
-                      className="flex w-full items-center gap-2"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      <span>Sair</span>
-                    </Link>
-                  }
-                />
+                  onClick={async () => {
+                    await fetch("/api/auth/logout", {
+                      method: "POST",
+                    });
+
+                    router.push("/login");
+                    router.refresh();
+                  }}
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Sair</span>
+                </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>

@@ -1,19 +1,35 @@
 "use client";
 
-import { SettingsIcon, LogOutIcon } from "lucide-react";
+import {
+  SettingsIcon,
+  Sun,
+  Moon,
+  UserCog,
+  Settings,
+  LogOut,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
-import { SettingsItens } from "@/lib/navigation-data";
-import { ModeToggle } from "./mode-toggle";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 
 export default function SettingsItem() {
+  const router = useRouter();
+  const { setTheme, resolvedTheme } = useTheme();
+
+  const isDark = resolvedTheme === "dark";
+
+  const toggleTheme = () => {
+    setTheme(isDark ? "light" : "dark");
+  };
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -23,28 +39,46 @@ export default function SettingsItem() {
           </Button>
         }
       />
-      <DropdownMenuContent>
-        <DropdownMenuItem className="focus:bg-transparent">
-          <ModeToggle className="w-full" />
-        </DropdownMenuItem>
-        {SettingsItens.map((item) => (
+      <DropdownMenuContent align="end" className="w-36">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Menu</DropdownMenuLabel>
+
           <DropdownMenuItem
-            key={item.to}
-            render={
-              <Link href={item.to} className="flex items-center gap-2">
-                <item.icon />
-                {item.label}
-              </Link>
-            }
-          ></DropdownMenuItem>
-        ))}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive">
-          <Link href="/logout" className="flex items-center gap-2">
-            <LogOutIcon />
+            onClick={() => {
+              toggleTheme();
+            }}
+          >
+            {isDark ? (
+              <Sun className="mr-2 h-4 w-4" />
+            ) : (
+              <Moon className="mr-2 h-4 w-4" />
+            )}
+            {resolvedTheme === "dark" ? "Tema claro" : "Tema escuro"}
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => router.push("/usuarios")}>
+            <UserCog className="mr-2 h-4 w-4" />
+            Usuários
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => router.push("/configuracoes")}>
+            <Settings className="mr-2 h-4 w-4" />
+            Configurações
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={async () => {
+              await fetch("/api/auth/logout", {
+                method: "POST",
+              });
+
+              router.push("/login");
+              router.refresh();
+            }}
+          >
+            <LogOut className="mr-2 h-4 w-4" />
             Sair
-          </Link>
-        </DropdownMenuItem>
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );

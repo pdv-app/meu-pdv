@@ -3,18 +3,20 @@
 import { useEffect, useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useUsersStore } from "@/store/useUsersStore";
-import { useRouter } from "next/dist/client/components/navigation";
+
+import { loginSchema } from "@/lib/validations/auth";
+import { authService } from "@/services/auth.service";
 
 const REMEMBER_KEY = "revenda-remember-email-v1";
 
 export default function LoginPage() {
   const router = useRouter();
-  const users = useUsersStore((s) => s.users);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
@@ -32,35 +34,34 @@ export default function LoginPage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !password) {
-      toast.error("Preencha e-mail e senha.");
+
+    // Validação Zod no Client
+    const validation = loginSchema.safeParse({ email, password });
+    if (!validation.success) {
+      toast.error(validation.error.issues[0].message);
       return;
     }
+
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 500));
-    const user = users.find(
-      (u) =>
-        u.email.toLowerCase() === email.trim().toLowerCase() &&
-        u.password === password,
-    );
-    setLoading(false);
+    try {
+      const response = await authService.login(validation.data);
 
-    if (!user) {
-      toast.error("E-mail ou senha inválidos.");
-      return;
-    }
-    if (!user.active) {
-      toast.error("Este usuário está inativo.");
-      return;
-    }
+      // Gerencia o Lembre-me
+      if (typeof window !== "undefined") {
+        if (remember) {
+          window.localStorage.setItem(REMEMBER_KEY, email.trim());
+        } else {
+          window.localStorage.removeItem(REMEMBER_KEY);
+        }
+      }
 
-    if (typeof window !== "undefined") {
-      if (remember) window.localStorage.setItem(REMEMBER_KEY, user.email);
-      else window.localStorage.removeItem(REMEMBER_KEY);
+      toast.success(`Bem-vindo(a), seu PDV está pronto!`);
+      router.push("/dashboard");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao realizar login.");
+    } finally {
+      setLoading(false);
     }
-
-    toast.success(`Bem-vindo(a), ${user.name.split(" ")[0]}!`);
-    router.push("/");
   };
 
   return (
@@ -95,7 +96,6 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
-                required
               />
             </div>
 
@@ -111,7 +111,6 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={loading}
                   className="pr-10"
-                  required
                 />
                 <button
                   type="button"
