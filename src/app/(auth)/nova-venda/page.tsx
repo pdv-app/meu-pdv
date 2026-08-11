@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   Check,
@@ -11,6 +11,8 @@ import {
   User,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,47 +33,75 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useDataStore } from "@/store/useDataStore";
-import { useCartStore } from "@/store/useCartStore";
-import { salesService } from "@/services/sales.service";
-import { currency, initials } from "@/lib/format";
-import type { PaymentMethod, SaleStatus } from "@/types";
-import { PAYMENT_LABELS } from "@/types";
-import { cn } from "@/lib/utils";
-import { useRouter } from "next/navigation";
-import { ProductThumb } from "@/components/product-thumb";
 
+import { currency, initials } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { ProductThumb } from "@/components/product-thumb";
 import { ClientPicker } from "@/components/nova-venda/client-picker";
 import { ProductPicker } from "@/components/nova-venda/product-picker";
 
+import { clientsService } from "@/services/clients.service";
+import { productsService } from "@/services/products.service";
+import { salesService } from "@/services/sales.service";
+import {
+  Client,
+  PAYMENT_LABELS,
+  PaymentMethod,
+  Product,
+  SaleStatus,
+} from "@/types";
+
+type CartItem = {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+};
+
 export default function NovaVenda() {
   const router = useRouter();
-  const clients = useDataStore((s) => s.clients);
-  const products = useDataStore((s) => s.products);
-  const {
-    client,
-    items,
-    step,
-    payment,
-    status,
-    dueDate,
-    notes,
-    setClient,
-    addProduct,
-    updateQty,
-    removeItem,
-    setStep,
-    setPayment,
-    setStatus,
-    setDueDate,
-    setNotes,
-    clear,
-  } = useCartStore();
+
+  // Dados do BD (substitui o useDataStore)
+  const [clients, setClients] = useState<Client[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
+
+  // Estado do Carrinho e Fluxo (substitui o useCartStore)
+  const [client, setClient] = useState<Client | null>(null);
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [step, setStep] = useState<"cart" | "review" | "payment">("cart");
+  const [payment, setPayment] = useState<PaymentMethod>(PaymentMethod.DINHEIRO);
+  const [status, setStatus] = useState<SaleStatus>(SaleStatus.PAGO);
+  const [dueDate, setDueDate] = useState("");
+  const [notes, setNotes] = useState("");
+  const [isFinalizing, setIsFinalizing] = useState(false);
 
   const [clientPicker, setClientPicker] = useState(false);
   const [productPicker, setProductPicker] = useState(false);
+
   const checkout = step === "review" || step === "payment";
   const checkoutStep = step === "payment" ? "payment" : "review";
+
+  // Busca os clientes e produtos ao carregar a página
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setLoadingData(true);
+        const [clientsData, productsData] = await Promise.all([
+          clientsService.list(),
+          productsService.list(),
+        ]);
+        setClients(clientsData as Client[]);
+        setProducts(productsData as Product[]);
+      } catch (error) {
+        toast.error("Erro ao carregar dados. Tente atualizar a página.");
+        console.error(error);
+      } finally {
+        setLoadingData(false);
+      }
+    }
+    loadData();
+  }, []);
 
   const total = useMemo(
     () => items.reduce((s, i) => s + i.unitPrice * i.quantity, 0),
@@ -80,29 +110,80 @@ export default function NovaVenda() {
 
   const canCheckout = client && items.length > 0;
 
+  // Funções do carrinho
+  const addProduct = (p: Product) => {
+    setItems((prev) => {
+      const exists = prev.find((i) => i.productId === p.id);
+      if (exists) {
+        return prev.map((i) =>
+          i.productId === p.id ? { ...i, quantity: i.quantity + 1 } : i,
+        );
+      }
+      return [
+        ...prev,
+        {
+          productId: p.id,
+          productName: p.name,
+          unitPrice: Number(p.salePrice), // Converte o Decimal do Prisma para Number
+          quantity: 1,
+        },
+      ];
+    });
+  };
+
+  const updateQty = (id: string, qty: number) => {
+    if (qty < 1) return;
+    setItems((prev) =>
+      prev.map((i) => (i.productId === id ? { ...i, quantity: qty } : i)),
+    );
+  };
+
+  const removeItem = (id: string) => {
+    setItems((prev) => prev.filter((i) => i.productId !== id));
+  };
+
+  const clear = () => {
+    setClient(null);
+    setItems([]);
+    setStep("cart");
+    setPayment(PaymentMethod.DINHEIRO);
+    setStatus(SaleStatus.PAGO);
+    setDueDate("");
+    setNotes("");
+  };
+
   const handleCheckoutBack = () => {
     if (checkoutStep === "payment") {
-      setStep("review"); // Volta para a etapa de revisão
+      setStep("review");
     } else {
-      setStep("cart"); // Volta para o carrinho (isso fecha o Drawer automaticamente)
+      setStep("cart");
     }
   };
 
   const finalize = async () => {
-    if (!client) return;
-    await salesService.create({
-      clientId: client.id,
-      clientName: client.name,
-      items,
-      total,
-      paymentMethod: payment,
-      status,
-      dueDate: status === "PENDENTE" ? dueDate || undefined : undefined,
-      notes,
-    });
-    toast.success("Venda registrada!");
-    clear();
-    router.push("/historico");
+    if (!client || items.length === 0) return;
+
+    setIsFinalizing(true);
+    try {
+      await salesService.create({
+        clientId: client.id,
+        clientName: client.name,
+        items,
+        total,
+        paymentMethod: payment,
+        status,
+        dueDate: status === "PENDENTE" ? dueDate || undefined : undefined,
+        notes,
+      });
+
+      toast.success("Venda registrada com sucesso!");
+      clear();
+      router.push("/historico");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao registrar venda.");
+    } finally {
+      setIsFinalizing(false);
+    }
   };
 
   return (
@@ -157,11 +238,13 @@ export default function NovaVenda() {
 
       <div className="mb-4 flex gap-2">
         <Button
+          disabled={loadingData}
           onClick={() => setProductPicker(true)}
           variant="outline"
           className="h-12 flex-1 justify-start rounded-xl border-dashed"
         >
-          <Plus className="mr-2 h-4 w-4" /> Adicionar produto
+          <Plus className="mr-2 h-4 w-4" />
+          {loadingData ? "Carregando produtos..." : "Adicionar produto"}
         </Button>
         {items.length > 0 && (
           <Button
@@ -261,15 +344,15 @@ export default function NovaVenda() {
           setClient(c);
           setClientPicker(false);
         }}
-        clients={clients}
+        clients={clients as any}
       />
 
       <ProductPicker
         open={productPicker}
         onClose={() => setProductPicker(false)}
-        products={products}
+        products={products as any}
         onPick={(p) => {
-          addProduct(p);
+          addProduct(p as any);
           toast.success(`${p.name} adicionado`);
         }}
       />
@@ -282,7 +365,6 @@ export default function NovaVenda() {
         }}
       >
         <DrawerContent className="h-screen">
-          {/* 1. Header com shrink-0 para nunca encolher */}
           <DrawerHeader className="flex-row items-center gap-2 shrink-0 px-4 md:px-6">
             <Button size="icon" variant="ghost" onClick={handleCheckoutBack}>
               <ArrowLeft className="h-4 w-4" />
@@ -292,9 +374,7 @@ export default function NovaVenda() {
             </DrawerTitle>
           </DrawerHeader>
 
-          {/* 2. Container principal com flex-1 e min-h-0 para o scroll funcionar */}
           <div className="flex min-h-0 flex-1 flex-col px-4 pb-6 md:px-6">
-            {/* 3. Card de resumo fixo no topo (shrink-0) */}
             <div className="mb-3 shrink-0 rounded-xl border border-border bg-card p-3 text-sm">
               <div className="font-medium">{client?.name}</div>
               <div className="text-xs text-muted-foreground">
@@ -310,7 +390,6 @@ export default function NovaVenda() {
                     Carrinho vazio.
                   </div>
                 ) : (
-                  /* 4. Área de scroll com flex-1 e min-h-0 (igual aos Pickers) */
                   <div className="min-h-0 flex-1 mb-4">
                     <ScrollArea className="h-full **:data-radix-scroll-area-thumb:hidden">
                       <div className="space-y-2 pr-3 pb-4 p-0.5">
@@ -366,7 +445,6 @@ export default function NovaVenda() {
                     </ScrollArea>
                   </div>
                 )}
-                {/* 5. Botão fixo no fundo (shrink-0) */}
                 <div className="shrink-0">
                   <Button
                     onClick={() => setStep("payment")}
@@ -380,22 +458,6 @@ export default function NovaVenda() {
               </>
             ) : (
               <>
-                {/* <div className="mb-3 space-y-1">
-                  {items.map((it) => (
-                    <div
-                      key={it.productId}
-                      className="flex items-center justify-between text-sm"
-                    >
-                      <div className="min-w-0 truncate pr-2">
-                        {it.quantity}× {it.productName}
-                      </div>
-                      <div className="font-medium tabular-nums">
-                        {currency(it.unitPrice * it.quantity)}
-                      </div>
-                    </div>
-                  ))}
-                </div> */}
-                {/* Lista de itens com Scroll, igual ao de "Revisar carrinho" */}
                 <div className="min-h-0 flex-1 mb-3">
                   <ScrollArea className="h-full **:data-radix-scroll-area-thumb:hidden pr-2">
                     <div className="space-y-1 pr-2">
@@ -438,7 +500,7 @@ export default function NovaVenda() {
                 <div className="mb-3">
                   <Label>Status</Label>
                   <div className="mt-1 grid grid-cols-2 gap-2">
-                    {(["PAGO", "PENDENTE"] as SaleStatus[]).map((s) => (
+                    {Object.values(SaleStatus).map((s) => (
                       <button
                         key={s}
                         onClick={() => setStatus(s)}
@@ -449,13 +511,13 @@ export default function NovaVenda() {
                             : "border-border text-muted-foreground",
                         )}
                       >
-                        {s === "PAGO" ? "Pago" : "Pendente"}
+                        {s === SaleStatus.PAGO ? "Pago" : "Pendente"}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                {status === "PENDENTE" && (
+                {status === SaleStatus.PENDENTE && (
                   <div className="mb-3 space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
                     <div className="text-sm text-amber-700">
                       Valor pendente:{" "}
@@ -485,10 +547,13 @@ export default function NovaVenda() {
                   <Button
                     onClick={finalize}
                     size="lg"
+                    disabled={isFinalizing}
                     className="flex-1 rounded-full"
                   >
-                    <Check className="mr-2 h-4 w-4" /> Confirmar ·{" "}
-                    {currency(total)}
+                    <Check className="mr-2 h-4 w-4" />
+                    {isFinalizing
+                      ? "Salvando..."
+                      : `Confirmar · ${currency(total)}`}
                   </Button>
                 </div>
               </>

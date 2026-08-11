@@ -42,7 +42,7 @@ export function ProductPicker({
       ? products.filter(
           (p) =>
             p.name.toLowerCase().includes(t) ||
-            p.category.toLowerCase().includes(t),
+            p.category?.toLowerCase().includes(t),
         )
       : products;
   }, [q, products]);
@@ -77,7 +77,7 @@ export function ProductPicker({
                   </div>
                 </div>
                 <div className="text-sm font-semibold tabular-nums">
-                  {currency(p.salePrice)}
+                  {currency(p.salePrice as number)}
                 </div>
                 {p.stock <= 0 && <Badge variant="outline">Esgotado</Badge>}
               </button>

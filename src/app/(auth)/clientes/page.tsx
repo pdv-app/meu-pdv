@@ -32,10 +32,10 @@ export default function ClientesPage() {
         // Faz o fetch em paralelo nas duas APIs
         const [fetchedClients, fetchedSales] = await Promise.all([
           clientsService.list(),
-          salesService.list().catch(() => []), // Previne que erro nas vendas quebre os clientes
+          salesService.list(), // Previne que erro nas vendas quebre os clientes
         ]);
         setClients(fetchedClients);
-        setSales(fetchedSales);
+        setSales(fetchedSales as Sale[]);
       } catch (error) {
         toast.error("Erro ao carregar a lista de clientes.");
         console.error("Erro ao carregar clientes ou vendas:", error);

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { productSchema } from "@/lib/validations/product";
+import { productSchema } from "../../../../lib/validations/product";
 
 export async function PATCH(
   request: Request,

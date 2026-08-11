@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { Product, SaleItem, PaymentMethod, SaleStatus } from "@/types";
+import { Product, SaleItem, PaymentMethod, SaleStatus } from "@/types";
 import { Client } from "@/prisma/client";
 
 export type PdvStep = "cart" | "review" | "payment";
@@ -31,13 +31,14 @@ export const useCartStore = create<CartState>()(
       client: null,
       items: [],
       step: "cart",
-      payment: "Pix",
-      status: "PAGO",
+      payment: PaymentMethod.PIX,
+      status: SaleStatus.PAGO,
       dueDate: "",
       notes: "",
       setClient: (c) => set({ client: c }),
       addProduct: (p, qty = 1) =>
         set((s) => {
+          const unitPrice = Number(p.salePrice);
           const existing = s.items.find((it) => it.productId === p.id);
           if (existing) {
             return {
@@ -55,7 +56,7 @@ export const useCartStore = create<CartState>()(
                 productId: p.id,
                 productName: p.name,
                 quantity: qty,
-                unitPrice: p.salePrice,
+                unitPrice,
               },
             ],
           };
@@ -83,8 +84,8 @@ export const useCartStore = create<CartState>()(
           client: null,
           items: [],
           step: "cart",
-          payment: "Pix",
-          status: "PAGO",
+          payment: PaymentMethod.PIX,
+          status: SaleStatus.PAGO,
           dueDate: "",
           notes: "",
         }),

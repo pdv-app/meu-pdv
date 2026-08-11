@@ -1,5 +1,5 @@
 import { apiRequest } from "@/lib/api-request";
-import type { ProductFormValues } from "@/lib/validations/product";
+import type { ProductFormValues } from "../lib/validations/product";
 
 export const productsService = {
   async list() {

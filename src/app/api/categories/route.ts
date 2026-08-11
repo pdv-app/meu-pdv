@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { categorySchema } from "@/lib/validations/product";
+import { categorySchema } from "../../../lib/validations/product";
 import prisma from "@/lib/prisma";
 
 export async function GET() {

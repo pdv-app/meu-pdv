@@ -1,0 +1,75 @@
+import { NextResponse } from "next/server";
+import prisma from "@/lib/prisma"; // Ajuste o caminho do seu prisma se necessário
+import { saleSchema } from "@/lib/validations/sale";
+
+export async function GET() {
+  try {
+    const sales = await prisma.sale.findMany({
+      include: {
+        items: true,
+      },
+    });
+    return NextResponse.json(sales);
+  } catch (error) {
+    console.error("Erro ao buscar vendas:", error);
+    return NextResponse.json(
+      { error: "Erro interno ao buscar vendas." },
+      { status: 500 },
+    );
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+
+    // Validação com Zod
+    const parsed = saleSchema.parse(body);
+
+    // Usa $transaction para garantir que a venda e o desconto no estoque ocorram juntos
+    const sale = await prisma.$transaction(async (tx) => {
+      // 1. Cria a venda e os itens da venda
+      const newSale = await tx.sale.create({
+        data: {
+          clientId: parsed.clientId,
+          clientName: parsed.clientName,
+          total: parsed.total,
+          paymentMethod: parsed.paymentMethod,
+          status: parsed.status,
+          dueDate: parsed.dueDate ? new Date(parsed.dueDate) : null,
+          notes: parsed.notes,
+          items: {
+            create: parsed.items.map((item) => ({
+              productId: item.productId,
+              productName: item.productName,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+            })),
+          },
+        },
+      });
+
+      // 2. Decrementa o estoque de cada produto vendido
+      for (const item of parsed.items) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: {
+              decrement: item.quantity,
+            },
+          },
+        });
+      }
+
+      return newSale;
+    });
+
+    return NextResponse.json(sale, { status: 201 });
+  } catch (error: any) {
+    console.error("Erro ao criar venda:", error);
+    return NextResponse.json(
+      { error: error.message || "Erro interno ao processar a venda." },
+      { status: 400 },
+    );
+  }
+}

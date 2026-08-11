@@ -1,12 +1,17 @@
-import type { Sale, PaymentMethod, SaleStatus } from "@/types";
+import { Sale, PaymentMethod, SaleStatus } from "@/types";
 
 const methods: PaymentMethod[] = [
-  "Dinheiro",
-  "Pix",
-  "Cartão de Crédito",
-  "Cartão de Débito",
+  PaymentMethod.DINHEIRO,
+  PaymentMethod.PIX,
+  PaymentMethod.CARTAO_DE_CREDITO,
+  PaymentMethod.CARTAO_DEBITO,
 ];
-const statuses: SaleStatus[] = ["PAGO", "PAGO", "PAGO", "PENDENTE"];
+const statuses: SaleStatus[] = [
+  SaleStatus.PAGO,
+  SaleStatus.PAGO,
+  SaleStatus.PAGO,
+  SaleStatus.PENDENTE,
+];
 
 function daysAgo(n: number) {
   const d = new Date();

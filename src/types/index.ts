@@ -1,18 +1,5 @@
 import { Prisma } from "@/prisma/client";
 
-export interface Product {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  image?: string;
-  costPrice: number;
-  salePrice: number;
-  stock: number;
-  minStock: number;
-  notes?: string;
-}
-
 export type ClientWithAddress = Prisma.ClientGetPayload<{
   include: { address: true };
 }>;
@@ -21,13 +8,6 @@ export type ClientesViewProps = {
   initialClients: ClientWithAddress[];
   sales: Sale[];
 };
-
-export type PaymentMethod =
-  | "Dinheiro"
-  | "Pix"
-  | "Cartão de Crédito"
-  | "Cartão de Débito";
-export type SaleStatus = "PAGO" | "PENDENTE";
 
 export interface SaleItem {
   productId: string;
@@ -49,9 +29,43 @@ export interface Sale {
   notes?: string;
 }
 
+export enum PaymentMethod {
+  DINHEIRO = "DINHEIRO",
+  PIX = "PIX",
+  CARTAO_DE_CREDITO = "CARTAO_DE_CREDITO",
+  CARTAO_DEBITO = "CARTAO_DEBITO",
+}
+
+export enum SaleStatus {
+  PAGO = "PAGO",
+  PENDENTE = "PENDENTE",
+}
+
 export const PAYMENT_LABELS: Record<PaymentMethod, string> = {
-  Dinheiro: "Dinheiro",
-  Pix: "Pix",
-  "Cartão de Crédito": "Cartão de Crédito",
-  "Cartão de Débito": "Cartão de Débito",
+  [PaymentMethod.DINHEIRO]: "Dinheiro",
+  [PaymentMethod.PIX]: "PIX",
+  [PaymentMethod.CARTAO_DE_CREDITO]: "Cartão de Crédito",
+  [PaymentMethod.CARTAO_DEBITO]: "Cartão de Débito",
 };
+
+export interface Client {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string | null;
+  notes?: string | null;
+}
+
+export interface Product {
+  id: string;
+  code?: string | null;
+  name: string;
+  salePrice: number | string;
+  stock: number;
+  image?: string | null;
+  minStock?: number | null;
+  category?: string | null;
+  description?: string | null;
+  costPrice?: number | null;
+  notes?: string | null;
+}

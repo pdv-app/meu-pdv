@@ -63,7 +63,7 @@ export default function Dashboard() {
     const pending = sales
       .filter((s) => s.status === "PENDENTE")
       .reduce((sum, s) => sum + s.total, 0);
-    const low = products.filter((p) => p.stock <= p.minStock);
+    const low = products.filter((p) => p.stock <= p.minStock!);
     return { soldToday, pending, low };
   }, [sales, products]);
 
