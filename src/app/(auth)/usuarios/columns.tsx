@@ -8,7 +8,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import type { AppUser } from "@/store/useUsersStore";
+import { AppUser } from "./page";
 
 export type UserTableData = AppUser & {
   groupLabel: string;

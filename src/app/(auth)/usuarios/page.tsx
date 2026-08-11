@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { z } from "zod";
 import {
   Drawer,
   DrawerContent,
@@ -39,16 +40,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useUsersStore, type AppUser } from "@/store/useUsersStore";
-import { useSettingsStore } from "@/store/useSettingsStore";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getUserColumns, type UserTableData } from "./columns";
 import { UsersDataTable } from "./data-table";
 
+// Serviços
+import { usersService } from "@/services/users.service";
+import {
+  getAccessGroups,
+  type AccessGroupDTO,
+} from "@/services/accessGroup.service";
+
+// Tipagem atualizada para compatibilidade com UserTableData
+export type AppUser = {
+  id: string;
+  name: string;
+  email: string;
+  groupId: string;
+  active: boolean;
+  password?: string;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+  group?: AccessGroupDTO;
+};
+
 interface FormData {
   name: string;
   email: string;
-  password: string;
+  password?: string;
   groupId: string;
   active: boolean;
 }
@@ -61,34 +80,91 @@ const emptyForm: FormData = {
   active: true,
 };
 
+// Schema do Zod para Validação no Frontend
+const userFormSchema = z.object({
+  name: z.string().min(1, "O nome é obrigatório"),
+  email: z.string().email("E-mail inválido"),
+  password: z.string().optional(),
+  groupId: z.string().min(1, "Selecione um grupo de acesso"),
+  active: z.boolean(),
+});
+
 export default function UsuariosPage() {
-  const users = useUsersStore((s) => s.users);
-  const groups = useSettingsStore((s) => s.groups);
+  const [users, setUsers] = useState<AppUser[]>([]);
+  const [groups, setGroups] = useState<AccessGroupDTO[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [editing, setEditing] = useState<AppUser | null>(null);
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<AppUser | null>(null);
 
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setIsLoading(true);
+        const [fetchedUsers, fetchedGroups] = await Promise.all([
+          usersService.list(),
+          getAccessGroups(),
+        ]);
+        setUsers(fetchedUsers);
+        setGroups(fetchedGroups);
+      } catch (error) {
+        toast.error("Erro ao carregar os dados.");
+        console.error(error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  const handleToggleUser = async (id: string, currentStatus: boolean) => {
+    try {
+      await usersService.toggleActive(id, !currentStatus);
+      setUsers((prev) =>
+        prev.map((u) => (u.id === id ? { ...u, active: !currentStatus } : u)),
+      );
+      toast.success(`Usuário ${!currentStatus ? "ativado" : "desativado"}`);
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao alterar status do usuário.");
+    }
+  };
+
   const enrichedUsers = useMemo<UserTableData[]>(() => {
-    const groupMap = Object.fromEntries(groups.map((g) => [g.id, g]));
+    const groupMap = Object.fromEntries(groups.map((g) => [g.id || "", g]));
+
     return users.map((u) => ({
       ...u,
-      groupLabel: groupMap[u.groupId]?.name ?? "—",
+      groupLabel: u.group?.name ?? groupMap[u.groupId]?.name ?? "—",
     }));
   }, [users, groups]);
 
   const columns = useMemo(
     () =>
       getUserColumns({
-        onToggle: (id) => useUsersStore.getState().toggleUser(id),
-        onEdit: setEditing,
-        onDelete: setDeleting,
+        onToggle: (id) => {
+          const target = users.find((u) => u.id === id);
+          if (target) handleToggleUser(id, target.active);
+        },
+        onEdit: (user) => setEditing(user as AppUser),
+        onDelete: (user) => setDeleting(user as AppUser),
       }),
-    [],
+    [users],
   );
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[60vh] w-full flex-col items-center justify-center gap-4 text-muted-foreground">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm font-medium">Carregando usuários...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full px-4">
-      <div className="mb-4">
+      <div className="mb-4 mt-6">
         <Link
           href="/configuracoes"
           className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition"
@@ -100,7 +176,7 @@ export default function UsuariosPage() {
       <UsersDataTable
         columns={columns}
         data={enrichedUsers}
-        groups={groups}
+        groups={groups as any}
         onCreateClick={() => setCreating(true)}
       />
 
@@ -114,70 +190,109 @@ export default function UsuariosPage() {
           }
         }}
         initial={editing}
+        groups={groups}
+        onSuccess={(updatedUser, isEdit) => {
+          if (isEdit) {
+            setUsers((prev) =>
+              prev.map((u) =>
+                u.id === updatedUser.id ? { ...u, ...updatedUser } : u,
+              ),
+            );
+          } else {
+            setUsers((prev) => [updatedUser, ...prev]);
+          }
+          setCreating(false);
+          setEditing(null);
+        }}
       />
 
-      <DeleteUser user={deleting} onClose={() => setDeleting(null)} />
+      <DeleteUser
+        user={deleting}
+        onClose={() => setDeleting(null)}
+        onSuccess={(id) => {
+          setUsers((prev) => prev.filter((u) => u.id !== id));
+          setDeleting(null);
+        }}
+      />
     </div>
   );
 }
-
-// --- COMPONENTES SECUNDÁRIOS ---
 
 function UserForm({
   open,
   onOpenChange,
   initial,
+  groups,
+  onSuccess,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   initial: AppUser | null;
+  groups: AccessGroupDTO[];
+  onSuccess: (user: AppUser, isEdit: boolean) => void;
 }) {
   const isMobile = useIsMobile();
-  const addUser = useUsersStore((s) => s.addUser);
-  const updateUser = useUsersStore((s) => s.updateUser);
-  const users = useUsersStore((s) => s.users);
-  const groups = useSettingsStore((s) => s.groups);
-
   const [form, setForm] = useState<FormData>(emptyForm);
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isEdit = !!initial;
 
-  const submit = () => {
-    const name = form.name.trim();
-    const email = form.email.trim().toLowerCase();
-    if (!name) return toast.error("Informe o nome");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-      return toast.error("E-mail inválido");
-    if (!form.password || form.password.length < 6)
-      return toast.error("A senha deve ter pelo menos 6 caracteres");
-    if (!form.groupId) return toast.error("Selecione um grupo de acesso");
-
-    const duplicated = users.some(
-      (u) => u.email.toLowerCase() === email && u.id !== initial?.id,
-    );
-    if (duplicated) return toast.error("Já existe um usuário com este e-mail");
-
-    if (isEdit && initial) {
-      updateUser(initial.id, {
-        name,
-        email,
-        password: form.password,
-        groupId: form.groupId,
-        active: form.active,
+  useEffect(() => {
+    if (initial && open) {
+      setForm({
+        name: initial.name,
+        email: initial.email,
+        password: "",
+        groupId: initial.groupId,
+        active: initial.active,
       });
-      toast.success("Usuário atualizado");
-    } else {
-      addUser({
-        name,
-        email,
-        password: form.password,
-        groupId: form.groupId,
-        active: form.active,
-      });
-      toast.success("Usuário criado");
+    } else if (!initial && open) {
+      setForm(emptyForm);
     }
-    onOpenChange(false);
+  }, [initial, open]);
+
+  const submit = async () => {
+    try {
+      const validation = userFormSchema.safeParse(form);
+      if (!validation.success) {
+        return toast.error(validation.error.issues[0].message);
+      }
+
+      if (!isEdit && (!form.password || form.password.length < 6)) {
+        return toast.error("A senha deve ter pelo menos 6 caracteres");
+      }
+
+      setIsSubmitting(true);
+
+      if (isEdit && initial) {
+        const updated = await usersService.update(initial.id, {
+          name: form.name.trim(),
+          email: form.email.trim().toLowerCase(),
+          password: form.password ? form.password : undefined,
+          groupId: form.groupId,
+          active: form.active,
+        });
+        toast.success("Usuário atualizado com sucesso!");
+        onSuccess(updated, true);
+      } else {
+        const created = await usersService.create({
+          name: form.name.trim(),
+          email: form.email.trim().toLowerCase(),
+          password: form.password!,
+          groupId: form.groupId,
+          active: form.active,
+        });
+        toast.success("Usuário criado com sucesso!");
+        onSuccess(created, false);
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Erro ao processar.";
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const FormFields = (
@@ -200,13 +315,17 @@ function UserForm({
         />
       </div>
       <div className="sm:col-span-2 space-y-2">
-        <Label>Senha *</Label>
+        <Label>{isEdit ? "Nova Senha (Opcional)" : "Senha *"}</Label>
         <div className="relative">
           <Input
             type={showPassword ? "text" : "password"}
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
-            placeholder="Mínimo 6 caracteres"
+            placeholder={
+              isEdit
+                ? "Deixe em branco para manter a atual"
+                : "Mínimo 6 caracteres"
+            }
             className="pr-10"
           />
           <button
@@ -230,21 +349,21 @@ function UserForm({
           onValueChange={(v) => setForm({ ...form, groupId: v as string })}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Selecione um grupo" />
+            <SelectValue placeholder="Selecione um grupo">
+              {groups.find((g) => g.id === form.groupId)?.name}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            {groups.filter((g) => g.active).length === 0 && (
+            {groups.length === 0 && (
               <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                Nenhum grupo ativo cadastrado. Crie um em Configurações.
+                Nenhum grupo ativo cadastrado.
               </div>
             )}
-            {groups
-              .filter((g) => g.active)
-              .map((g) => (
-                <SelectItem key={g.id} value={g.name}>
-                  {g.name}
-                </SelectItem>
-              ))}
+            {groups.map((g) => (
+              <SelectItem key={g.id} value={g.id!}>
+                {g.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -270,10 +389,15 @@ function UserForm({
 
   const ActionButtons = (
     <div className="flex gap-2 w-full justify-between">
-      <Button variant="outline" onClick={() => onOpenChange(false)}>
+      <Button
+        variant="outline"
+        onClick={() => onOpenChange(false)}
+        disabled={isSubmitting}
+      >
         Cancelar
       </Button>
-      <Button onClick={submit}>
+      <Button onClick={submit} disabled={isSubmitting}>
+        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         {isEdit ? "Salvar alterações" : "Criar usuário"}
       </Button>
     </div>
@@ -319,11 +443,29 @@ function UserForm({
 function DeleteUser({
   user,
   onClose,
+  onSuccess,
 }: {
   user: AppUser | null;
   onClose: () => void;
+  onSuccess: (id: string) => void;
 }) {
-  const removeUser = useUsersStore((s) => s.removeUser);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleConfirm = async () => {
+    if (!user) return;
+    try {
+      setIsDeleting(true);
+      await usersService.delete(user.id);
+      toast.success("Usuário removido");
+      onSuccess(user.id);
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao excluir usuário");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <AlertDialog open={!!user} onOpenChange={(o) => !o && onClose()}>
       <AlertDialogContent>
@@ -335,16 +477,13 @@ function DeleteUser({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={() => {
-              if (!user) return;
-              removeUser(user.id);
-              toast.success("Usuário removido");
-              onClose();
-            }}
-          >
-            Remover
+          <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirm} disabled={isDeleting}>
+            {isDeleting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              "Remover"
+            )}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
