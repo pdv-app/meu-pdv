@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
+import Link from "next/link";
 
 export default function SettingsItem() {
   const router = useRouter();
@@ -55,14 +56,23 @@ export default function SettingsItem() {
             )}
             {resolvedTheme === "dark" ? "Tema claro" : "Tema escuro"}
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => router.push("/usuarios")}>
-            <UserCog className="mr-2 h-4 w-4" />
-            Usuários
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => router.push("/configuracoes")}>
-            <Settings className="mr-2 h-4 w-4" />
-            Configurações
-          </DropdownMenuItem>
+          <DropdownMenuItem
+            render={
+              <Link href="/usuarios">
+                <UserCog className="mr-2 h-4 w-4" />
+                Usuários
+              </Link>
+            }
+          />
+
+          <DropdownMenuItem
+            render={
+              <Link href="/configuracoes">
+                <Settings className="mr-2 h-4 w-4" />
+                Configurações
+              </Link>
+            }
+          />
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-destructive focus:text-destructive"
