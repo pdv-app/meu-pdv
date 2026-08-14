@@ -1,11 +1,19 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { productSchema } from "../../../../lib/validations/product";
+import { productSchema } from "@/lib/validations/product";
+import { requirePermission } from "@/lib/require-permission";
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const auth = await requirePermission("produtos", "Editar");
+
+  if (!auth.authorized) {
+    console.log("Usuário não autorizado para editar produtos.");
+    return auth.response;
+  }
+
   try {
     const { id } = await params;
     const body = await request.json();
@@ -82,6 +90,12 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const auth = await requirePermission("produtos", "Excluir");
+
+  if (!auth.authorized) {
+    return auth.response;
+  }
+
   try {
     const { id } = await params;
 

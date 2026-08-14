@@ -5,9 +5,7 @@ import prisma from "@/lib/prisma";
 import { loginSchema } from "@/lib/validations/auth";
 import bcrypt from "bcryptjs";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "chave-secreta-super-segura",
-);
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
 export async function POST(req: Request) {
   try {

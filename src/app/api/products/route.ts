@@ -1,24 +1,31 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { productSchema } from "../../../lib/validations/product";
+import { productSchema } from "@/lib/validations/product";
+import { requirePermission } from "@/lib/require-permission";
 
 export async function GET() {
+  const auth = await requirePermission("produtos", "Visualizar");
+
+  if (!auth.authorized) {
+    return auth.response;
+  }
+
   try {
     const products = await prisma.product.findMany({
       include: { category: true },
       orderBy: { name: "asc" },
     });
 
-    // Convertendo Decimal para number para o frontend
-    const serializedProducts = products.map((p) => ({
-      ...p,
-      costPrice: Number(p.costPrice),
-      salePrice: Number(p.salePrice),
+    const serializedProducts = products.map((product) => ({
+      ...product,
+      costPrice: Number(product.costPrice),
+      salePrice: Number(product.salePrice),
     }));
 
     return NextResponse.json(serializedProducts);
   } catch (error) {
     console.error("Erro ao buscar produtos:", error);
+
     return NextResponse.json(
       { error: "Erro ao buscar produtos" },
       { status: 500 },
@@ -27,6 +34,12 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const auth = await requirePermission("produtos", "Adicionar");
+
+  if (!auth.authorized) {
+    return auth.response;
+  }
+
   try {
     const body = await request.json();
     const data = productSchema.parse(body);
@@ -34,10 +47,12 @@ export async function POST(request: Request) {
     const product = await prisma.product.create({
       data: {
         ...data,
-        costPrice: data.costPrice, // Prisma aceita number e converte pra Decimal internamente
+        costPrice: data.costPrice,
         salePrice: data.salePrice,
       },
-      include: { category: true },
+      include: {
+        category: true,
+      },
     });
 
     return NextResponse.json(
@@ -50,6 +65,7 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     console.error("Erro ao criar produto:", error);
+
     return NextResponse.json(
       { error: "Erro ao criar produto" },
       { status: 400 },

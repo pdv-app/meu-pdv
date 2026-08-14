@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/select";
 import { Category } from "@/prisma/client";
 import { Loader2 } from "lucide-react";
+import { usePermissions } from "@/components/auth/permissions-provider";
 
 // 1. Estado do Formulário usa NUMBER agora, compatível com frontend
 export type FormState = {
@@ -70,6 +71,7 @@ const emptyForm: FormState = {
 };
 
 export default function ProdutosPage() {
+  const { can } = usePermissions();
   const [products, setProducts] = useState<ProductFrontend[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,8 +116,9 @@ export default function ProdutosPage() {
         onStock: setStockDialog,
         onEdit: setEditing,
         onDelete: setDeleting,
+        can,
       }),
-    [],
+    [can],
   );
 
   if (loading) {

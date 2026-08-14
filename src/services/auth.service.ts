@@ -10,7 +10,7 @@ export const authService = {
   },
 
   async logout() {
-    return apiRequest("api/auth/logout", {
+    return apiRequest("/auth/logout", {
       method: "POST",
     });
   },

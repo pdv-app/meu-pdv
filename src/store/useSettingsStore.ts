@@ -125,7 +125,7 @@ const allPerms = (): Permissions =>
 
 const viewOnly = (): Permissions =>
   Object.fromEntries(
-    MODULES.map((m) => [m.key, ["view" as ActionKey]]),
+    MODULES.map((m) => [m.key, ["Visualizar" as ActionKey]]),
   ) as Permissions;
 
 const defaultGroups: AccessGroup[] = [
