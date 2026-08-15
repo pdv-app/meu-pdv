@@ -97,6 +97,7 @@ export default function UsuariosPage() {
   const [editing, setEditing] = useState<AppUser | null>(null);
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<AppUser | null>(null);
+  const [passwordResetting, setPasswordResetting] = useState<AppUser | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -149,6 +150,7 @@ export default function UsuariosPage() {
         },
         onEdit: (user) => setEditing(user as AppUser),
         onDelete: (user) => setDeleting(user as AppUser),
+        onChangePassword: (user) => setPasswordResetting(user as AppUser),
       }),
     [users],
   );
@@ -213,6 +215,11 @@ export default function UsuariosPage() {
           setUsers((prev) => prev.filter((u) => u.id !== id));
           setDeleting(null);
         }}
+      />
+      
+      <ChangePasswordDialog
+        user={passwordResetting}
+        onClose={() => setPasswordResetting(null)}
       />
     </div>
   );
@@ -488,5 +495,96 @@ function DeleteUser({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+  );
+}
+
+function ChangePasswordDialog({
+  user,
+  onClose,
+}: {
+  user: AppUser | null;
+  onClose: () => void;
+}) {
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      setPassword("");
+      setShowPassword(false);
+    }
+  }, [user]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    if (password.length < 6) {
+      return toast.error("A senha deve ter pelo menos 6 caracteres");
+    }
+
+    try {
+      setIsSubmitting(true);
+      await usersService.update(user.id, {
+        password: password,
+      });
+      toast.success("Senha alterada com sucesso!");
+      onClose();
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao alterar senha.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!user} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Trocar Senha</DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            Defina uma nova senha para o usuário <strong>{user?.name}</strong>
+          </p>
+        </DialogHeader>
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nova Senha</Label>
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Mínimo 6 caracteres"
+                  className="pr-10"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" type="button" onClick={onClose} disabled={isSubmitting}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Salvar nova senha
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

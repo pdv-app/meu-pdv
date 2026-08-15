@@ -1,5 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import { MoreVertical, Pencil, Settings2, Trash2 } from "lucide-react";
+import { MoreVertical, Pencil, Settings2, Trash2, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
@@ -18,12 +18,14 @@ export type UserActions = {
   onToggle: (id: string) => void;
   onEdit: (u: AppUser) => void;
   onDelete: (u: AppUser) => void;
+  onChangePassword: (u: AppUser) => void;
 };
 
 export function getUserColumns({
   onToggle,
   onEdit,
   onDelete,
+  onChangePassword,
 }: UserActions): ColumnDef<UserTableData>[] {
   return [
     {
@@ -63,6 +65,18 @@ export function getUserColumns({
                     >
                       <Pencil className="mr-2 h-4 w-4" />
                       Editar usuário
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start h-9 px-3"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onChangePassword(u);
+                      }}
+                    >
+                      <Key className="mr-2 h-4 w-4" />
+                      Trocar senha
                     </Button>
                     <Separator className="my-1" />
                     <Button
@@ -136,14 +150,25 @@ export function getUserColumns({
               variant="ghost"
               className="h-8 w-8"
               onClick={() => onEdit(u)}
+              title="Editar usuário"
             >
               <Pencil className="h-4 w-4" />
             </Button>
             <Button
               size="icon"
               variant="ghost"
+              className="h-8 w-8"
+              onClick={() => onChangePassword(u)}
+              title="Trocar senha"
+            >
+              <Key className="h-4 w-4" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
               className="h-8 w-8 text-destructive"
               onClick={() => onDelete(u)}
+              title="Remover usuário"
             >
               <Trash2 className="h-4 w-4" />
             </Button>
