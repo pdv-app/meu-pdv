@@ -1,14 +1,19 @@
+import { requireAuth } from "@/lib/proxy";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { SiteHeader } from "@/components/layout/site-header";
 import { BottomNavigation } from "@/components/layout/bottom-navigation";
 import { PermissionsProviderWrapper } from "@/components/auth/permissions-provider-wrapper";
 
-export default function AuthLayout({
+export default async function AuthLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // O proxy entra em ação aqui: se não houver token, ele barra o acesso
+  // e redireciona para o /login antes de renderizar qualquer componente da interface.
+  await requireAuth();
+
   return (
     <PermissionsProviderWrapper>
       <SidebarProvider
