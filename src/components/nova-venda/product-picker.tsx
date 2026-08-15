@@ -26,11 +26,13 @@ export function ProductPicker({
   open,
   onClose,
   products,
+  cartItems,
   onPick,
 }: {
   open: boolean;
   onClose: () => void;
   products: import("@/types").Product[];
+  cartItems: { productId: string; quantity: number }[];
   onPick: (p: import("@/types").Product) => void;
 }) {
   const [q, setQ] = useState("");
@@ -62,26 +64,28 @@ export function ProductPicker({
         {/* SOLUÇÃO: Esconde a barra alvejando o elemento interno do Radix */}
         <ScrollArea className="h-full **:data-radix-scroll-area-thumb:hidden">
           <div className="space-y-1 pr-3 pb-4">
-            {filtered.map((p) => (
+            {filtered.map((p) => {
+              const cartQty = cartItems.find((i) => i.productId === p.id)?.quantity || 0;
+              const remaining = p.stock - cartQty;
+              return (
               <button
                 key={p.id}
                 onClick={() => onPick(p)}
-                disabled={p.stock <= 0}
                 className="flex w-full items-center gap-3 rounded-xl border border-border/60 p-2.5 text-left transition hover:border-primary/40 hover:bg-accent disabled:opacity-50"
               >
                 <ProductThumb name={p.name} />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium">{p.name}</div>
                   <div className="text-xs text-muted-foreground">
-                    {p.stock} em estoque
+                    {remaining} em estoque
                   </div>
                 </div>
                 <div className="text-sm font-semibold tabular-nums">
                   {currency(p.salePrice as number)}
                 </div>
-                {p.stock <= 0 && <Badge variant="outline">Esgotado</Badge>}
+                {remaining <= 0 && <Badge variant="outline" className="text-amber-600 border-amber-600/30">Sem estoque</Badge>}
               </button>
-            ))}
+            )})}
           </div>
         </ScrollArea>
       </div>

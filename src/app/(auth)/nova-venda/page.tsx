@@ -129,6 +129,14 @@ export default function NovaVenda() {
   const addProduct = (p: Product) => {
     setItems((prev) => {
       const exists = prev.find((i) => i.productId === p.id);
+      const currentQty = exists ? exists.quantity : 0;
+      
+      if (currentQty + 1 > p.stock) {
+        toast.warning(`Atenção: Estoque insuficiente para ${p.name}. (Em estoque: ${p.stock})`, {
+          duration: 4000,
+        });
+      }
+
       if (exists) {
         return prev.map((i) =>
           i.productId === p.id ? { ...i, quantity: i.quantity + 1 } : i,
@@ -148,6 +156,14 @@ export default function NovaVenda() {
 
   const updateQty = (id: string, qty: number) => {
     if (qty < 1) return;
+    
+    const product = products.find((p) => p.id === id);
+    if (product && qty > product.stock) {
+      toast.warning(`Atenção: Estoque insuficiente para ${product.name}. (Em estoque: ${product.stock})`, {
+        duration: 4000,
+      });
+    }
+
     setItems((prev) =>
       prev.map((i) => (i.productId === id ? { ...i, quantity: qty } : i)),
     );
@@ -375,6 +391,7 @@ export default function NovaVenda() {
         open={productPicker}
         onClose={() => setProductPicker(false)}
         products={products as any}
+        cartItems={items}
         onPick={(p) => {
           addProduct(p as any);
           toast.success(`${p.name} adicionado`);
@@ -548,7 +565,7 @@ export default function NovaVenda() {
                         Valor pendente:{" "}
                         <span className="font-semibold">{currency(total)}</span>
                       </div>
-                      <div>
+                      <div className="mt-2 flex flex-col gap-1.5">
                         <Label>Data prevista</Label>
                         <Input
                           type="date"
@@ -752,7 +769,7 @@ export default function NovaVenda() {
                         Valor pendente:{" "}
                         <span className="font-semibold">{currency(total)}</span>
                       </div>
-                      <div>
+                      <div className="mt-2 flex flex-col gap-1.5">
                         <Label>Data prevista</Label>
                         <Input
                           type="date"
