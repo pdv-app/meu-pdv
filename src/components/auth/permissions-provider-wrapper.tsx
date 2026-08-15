@@ -7,6 +7,9 @@ import type { Permissions } from "@/store/useSettingsStore";
 
 interface UserContext {
   permissions?: Permissions;
+  sub?: string;
+  email?: string;
+  name?: string;
 }
 
 function getUserContext(): UserContext | null {
@@ -41,9 +44,12 @@ export function PermissionsProviderWrapper({
   const context = useMemo(() => getUserContext(), []);
 
   const permissions = context?.permissions ?? {};
+  const user = context?.sub
+    ? { sub: context.sub, email: context.email || "", name: context.name || "" }
+    : undefined;
 
   return (
-    <PermissionsProvider permissions={permissions}>
+    <PermissionsProvider permissions={permissions} user={user}>
       {children}
     </PermissionsProvider>
   );

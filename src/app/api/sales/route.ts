@@ -66,10 +66,15 @@ export async function POST(req: Request) {
 
     return NextResponse.json(sale, { status: 201 });
   } catch (error: any) {
-    console.error("Erro ao criar venda:", error);
+    if (error.name === "ZodError") {
+      return NextResponse.json(
+        { error: "Dados inválidos: " + error.issues[0].message },
+        { status: 400 },
+      );
+    }
     return NextResponse.json(
-      { error: error.message || "Erro interno ao processar a venda." },
-      { status: 400 },
+      { error: "Erro interno ao processar a venda." },
+      { status: 500 },
     );
   }
 }

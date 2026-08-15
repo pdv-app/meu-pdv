@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Receipt, Loader2 } from "lucide-react";
+import { Receipt, Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -19,13 +19,19 @@ import { PAYMENT_LABELS, type Sale } from "@/types";
 import { salesService } from "@/services/sales.service";
 import { getSaleColumns } from "./columns";
 import { SalesDataTable } from "./data-table";
+import { usePermissions } from "@/components/auth/permissions-provider";
 
 export default function HistoricoPage() {
+  const { can } = usePermissions();
   const [sales, setSales] = useState<Sale[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const addVoucher = useVouchersStore((s) => s.addVoucher);
 
   useEffect(() => {
+    if (!can("historico", "Visualizar")) {
+      setIsLoading(false);
+      return;
+    }
     async function loadData() {
       try {
         setIsLoading(true);
@@ -40,7 +46,7 @@ export default function HistoricoPage() {
     }
 
     loadData();
-  }, []);
+  }, [can]);
 
   // Ordena as vendas da mais recente para a mais antiga
   const sortedSales = useMemo(() => {
@@ -78,6 +84,15 @@ export default function HistoricoPage() {
       <div className="flex h-[60vh] w-full flex-col items-center justify-center gap-4 text-muted-foreground">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <p className="text-sm font-medium">Carregando histórico de vendas...</p>
+      </div>
+    );
+  }
+
+  if (!can("historico", "Visualizar")) {
+    return (
+      <div className="flex h-[60vh] w-full flex-col items-center justify-center gap-4 text-muted-foreground">
+        <AlertTriangle className="h-12 w-12 text-destructive opacity-50" />
+        <p className="text-sm font-medium">Você não tem permissão para visualizar o histórico.</p>
       </div>
     );
   }

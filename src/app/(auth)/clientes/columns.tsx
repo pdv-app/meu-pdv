@@ -15,12 +15,14 @@ export type ClientActions = {
   onView: (c: ClientWithAddress) => void;
   onEdit: (c: ClientWithAddress) => void;
   onDelete: (c: ClientWithAddress) => void;
+  can: (module: "clientes", action: "Visualizar" | "Adicionar" | "Editar" | "Excluir") => boolean;
 };
 
 export function getClientColumns({
   onView,
   onEdit,
   onDelete,
+  can,
 }: ClientActions): ColumnDef<ClientTableData>[] {
   return [
     {
@@ -106,24 +108,28 @@ export function getClientColumns({
             >
               <Eye className="h-4 w-4" />
             </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-8 w-8"
-              onClick={() => onEdit(c)}
-              aria-label="Editar"
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-8 w-8 text-destructive"
-              onClick={() => onDelete(c)}
-              aria-label="Excluir"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            {can("clientes", "Editar") && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8"
+                onClick={() => onEdit(c)}
+                aria-label="Editar"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            )}
+            {can("clientes", "Excluir") && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 text-destructive"
+                onClick={() => onDelete(c)}
+                aria-label="Excluir"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         );
       },

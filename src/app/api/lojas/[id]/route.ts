@@ -13,7 +13,7 @@ export async function PUT(
     const parsed = lojaSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { message: "Dados inválidos", errors: parsed.error.format() },
+        { error: "Dados inválidos: " + parsed.error.issues[0].message },
         { status: 400 },
       );
     }
@@ -28,7 +28,7 @@ export async function PUT(
   } catch (error) {
     console.error("Erro ao atualizar loja:", error);
     return NextResponse.json(
-      { message: "Erro ao atualizar dados" },
+      { error: "Erro ao atualizar dados." },
       { status: 500 },
     );
   }

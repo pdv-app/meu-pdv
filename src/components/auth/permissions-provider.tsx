@@ -13,25 +13,37 @@ import type {
 interface PermissionsContextValue {
   permissions: Permissions;
   can: (module: ModuleKey, action: ActionKey) => boolean;
+  user?: {
+    sub: string;
+    email: string;
+    name: string;
+  };
 }
 
 const PermissionsContext = createContext<PermissionsContextValue | null>(null);
 
 interface PermissionsProviderProps {
   permissions: Permissions;
+  user?: {
+    sub: string;
+    email: string;
+    name: string;
+  };
   children: ReactNode;
 }
 
 export function PermissionsProvider({
   permissions,
+  user,
   children,
 }: PermissionsProviderProps) {
   const value = useMemo<PermissionsContextValue>(
     () => ({
       permissions,
+      user,
       can: (module, action) => hasPermission(permissions, module, action),
     }),
-    [permissions],
+    [permissions, user],
   );
 
   return (

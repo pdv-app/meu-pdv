@@ -1,12 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
-import { AlertTriangle, Clock, DollarSign, Package } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { AlertTriangle, Clock, DollarSign, Package, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useDataStore } from "@/store/useDataStore";
 import { currency, dateTime, isToday } from "@/lib/format";
 import Link from "next/link";
+import { salesService } from "@/services/sales.service";
+import { productsService } from "@/services/products.service";
+import type { Sale } from "@/types";
+import type { ProductFrontend } from "../produtos/columns";
+import { usePermissions } from "@/components/auth/permissions-provider";
 
 function StatCard({
   icon: Icon,
@@ -53,24 +57,80 @@ function StatCard({
 }
 
 export default function Dashboard() {
-  const sales = useDataStore((s) => s.sales);
-  const products = useDataStore((s) => s.products);
+  const { can, user } = usePermissions();
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [products, setProducts] = useState<ProductFrontend[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!can("dashboard", "Visualizar")) {
+      setIsLoading(false);
+      return;
+    }
+    async function loadData() {
+      try {
+        setIsLoading(true);
+        const [fetchedSales, fetchedProducts] = await Promise.all([
+          salesService.list(),
+          productsService.list() as Promise<ProductFrontend[]>,
+        ]);
+        setSales(fetchedSales);
+        setProducts(fetchedProducts);
+      } catch (error) {
+        console.error("Erro ao carregar dashboard:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadData();
+  }, [can]);
 
   const stats = useMemo(() => {
     const soldToday = sales
       .filter((s) => isToday(s.date) && s.status === "PAGO")
-      .reduce((sum, s) => sum + s.total, 0);
+      .reduce((sum, s) => sum + Number(s.total), 0);
     const pending = sales
       .filter((s) => s.status === "PENDENTE")
-      .reduce((sum, s) => sum + s.total, 0);
-    const low = products.filter((p) => p.stock <= p.minStock!);
+      .reduce((sum, s) => sum + Number(s.total), 0);
+    const low = products.filter((p) => p.stock <= (p.minStock ?? 0));
     return { soldToday, pending, low };
   }, [sales, products]);
 
-  const latest = sales.slice(0, 5);
+  // Ordenar as vendas pela data mais recente
+  const sortedSales = useMemo(() => {
+    return [...sales].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+    );
+  }, [sales]);
+
+  const latest = sortedSales.slice(0, 5);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-[60vh] w-full flex-col items-center justify-center gap-4 text-muted-foreground">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm font-medium">Carregando dashboard...</p>
+      </div>
+    );
+  }
+
+  if (!can("dashboard", "Visualizar")) {
+    return (
+      <div className="flex h-[60vh] w-full flex-col items-center justify-center gap-4 text-muted-foreground">
+        <AlertTriangle className="h-12 w-12 text-destructive opacity-50" />
+        <p className="text-sm font-medium">Você não tem permissão para visualizar o dashboard.</p>
+      </div>
+    );
+  }
+
+  const firstName = user?.name ? user.name.split(" ")[0] : "Usuário";
 
   return (
     <div className="px-4">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight">Olá, {firstName}</h1>
+        <p className="text-sm text-muted-foreground">Aqui está o resumo da sua loja hoje.</p>
+      </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           icon={DollarSign}

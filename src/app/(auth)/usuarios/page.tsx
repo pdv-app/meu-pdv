@@ -245,6 +245,15 @@ function UserForm({
 
   const isEdit = !!initial;
 
+  const selectableGroups = useMemo(() => {
+    return groups.filter((g) => {
+      if (g.id === "cmstoijdr0001bkps4e565oiq") {
+        return initial?.id === "cmstoiwnv0002bkps83yl0i4p";
+      }
+      return true;
+    });
+  }, [groups, initial]);
+
   useEffect(() => {
     if (initial && open) {
       setForm({
@@ -361,12 +370,12 @@ function UserForm({
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            {groups.length === 0 && (
+            {selectableGroups.length === 0 && (
               <div className="px-2 py-1.5 text-xs text-muted-foreground">
                 Nenhum grupo ativo cadastrado.
               </div>
             )}
-            {groups.map((g) => (
+            {selectableGroups.map((g) => (
               <SelectItem key={g.id} value={g.id!}>
                 {g.name}
               </SelectItem>

@@ -8,7 +8,7 @@ export async function GET() {
 
     if (!loja) {
       return NextResponse.json(
-        { message: "Loja não encontrada" },
+        { error: "Loja não encontrada." },
         { status: 404 },
       );
     }
@@ -17,7 +17,7 @@ export async function GET() {
   } catch (error) {
     console.error("Erro ao buscar loja:", error);
     return NextResponse.json(
-      { message: "Erro interno do servidor" },
+      { error: "Erro interno do servidor." },
       { status: 500 },
     );
   }
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Erro ao criar loja:", error);
     return NextResponse.json(
-      { message: "Erro interno do servidor" },
+      { error: "Erro interno do servidor ao criar loja." },
       { status: 500 },
     );
   }

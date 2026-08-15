@@ -371,6 +371,7 @@ function ProductForm({
   isEdit,
   categories,
   onSubmit,
+  onCategoryCreated,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;

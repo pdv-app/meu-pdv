@@ -11,14 +11,15 @@ import { ClientForm } from "@/components/clients/client-form";
 import ClientDetail from "@/components/clients/client-detail";
 import DeleteClient from "@/components/clients/delete-client";
 import type { ClientWithAddress, Sale } from "@/types";
+import { usePermissions } from "@/components/auth/permissions-provider";
+import { AlertTriangle } from "lucide-react";
 
 export default function ClientesPage() {
-  // Estados para os dados vindos da API
+  const { can } = usePermissions();
   const [clients, setClients] = useState<ClientWithAddress[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Estados de controle da interface
   const [editing, setEditing] = useState<ClientWithAddress | null>(null);
   const [creating, setCreating] = useState(false);
   const [detail, setDetail] = useState<ClientWithAddress | null>(null);
@@ -26,6 +27,10 @@ export default function ClientesPage() {
 
   // Busca os dados iniciais assim que o componente é montado no navegador
   useEffect(() => {
+    if (!can("clientes", "Visualizar")) {
+      setIsLoading(false);
+      return;
+    }
     async function loadData() {
       try {
         setIsLoading(true);
@@ -45,7 +50,7 @@ export default function ClientesPage() {
     }
 
     loadData();
-  }, []);
+  }, [can]);
 
   // Mescla os clientes com os dados das vendas
   const enrichedClients = useMemo(() => {
@@ -70,8 +75,9 @@ export default function ClientesPage() {
         onView: setDetail,
         onEdit: setEditing,
         onDelete: setDeleting,
+        can,
       }),
-    [],
+    [can],
   );
 
   // Tela de Loading enquanto os dados são buscados
@@ -84,12 +90,22 @@ export default function ClientesPage() {
     );
   }
 
+  if (!can("clientes", "Visualizar")) {
+    return (
+      <div className="flex h-[60vh] w-full flex-col items-center justify-center gap-4 text-muted-foreground">
+        <AlertTriangle className="h-12 w-12 text-destructive opacity-50" />
+        <p className="text-sm font-medium">Você não tem permissão para visualizar clientes.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full px-4 py-6">
       <ClientsDataTable
         columns={columns}
         data={enrichedClients}
         onCreateClick={() => setCreating(true)}
+        canAdd={can("clientes", "Adicionar")}
       />
 
       <ClientForm

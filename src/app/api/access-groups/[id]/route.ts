@@ -26,7 +26,7 @@ export async function PATCH(
     console.error("--> ERRO DETALHADO NO PATCH:", error);
 
     return NextResponse.json(
-      { message: error.message || "Erro desconhecido ao atualizar grupo" },
+      { error: "Erro desconhecido ao atualizar grupo." },
       { status: 500 },
     );
   }
@@ -46,7 +46,7 @@ export async function DELETE(
     if (usersCount > 0) {
       return NextResponse.json(
         {
-          message:
+          error:
             "Não é possível excluir um grupo que possui usuários vinculados.",
         },
         { status: 400 },
@@ -59,9 +59,8 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error("--> ERRO DETALHADO NO DELETE:", error);
     return NextResponse.json(
-      { message: error.message || "Erro ao excluir grupo" },
+      { error: "Erro ao excluir grupo." },
       { status: 500 },
     );
   }

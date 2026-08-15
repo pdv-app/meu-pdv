@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { usePermissions } from "@/components/auth/permissions-provider";
+import { AlertTriangle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +26,13 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Select,
   SelectContent,
@@ -60,6 +69,8 @@ type CartItem = {
 
 export default function NovaVenda() {
   const router = useRouter();
+  const { can } = usePermissions();
+  const isMobile = useIsMobile();
 
   // Dados do BD (substitui o useDataStore)
   const [clients, setClients] = useState<Client[]>([]);
@@ -84,6 +95,10 @@ export default function NovaVenda() {
 
   // Busca os clientes e produtos ao carregar a página
   useEffect(() => {
+    if (!can("nova-venda", "Visualizar")) {
+      setLoadingData(false);
+      return;
+    }
     async function loadData() {
       try {
         setLoadingData(true);
@@ -101,7 +116,7 @@ export default function NovaVenda() {
       }
     }
     loadData();
-  }, []);
+  }, [can]);
 
   const total = useMemo(
     () => items.reduce((s, i) => s + i.unitPrice * i.quantity, 0),
@@ -185,6 +200,15 @@ export default function NovaVenda() {
       setIsFinalizing(false);
     }
   };
+
+  if (!can("nova-venda", "Visualizar")) {
+    return (
+      <div className="flex h-[60vh] w-full flex-col items-center justify-center gap-4 text-muted-foreground">
+        <AlertTriangle className="h-12 w-12 text-destructive opacity-50" />
+        <p className="text-sm font-medium">Você não tem permissão para visualizar vendas.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-[80vh] flex flex-col px-4">
@@ -358,209 +382,415 @@ export default function NovaVenda() {
       />
 
       {/* Checkout */}
-      <Drawer
-        open={checkout}
-        onOpenChange={(o) => {
-          if (!o) setStep("cart");
-        }}
-      >
-        <DrawerContent className="h-screen">
-          <DrawerHeader className="flex-row items-center gap-2 shrink-0 px-4 md:px-6">
-            <Button size="icon" variant="ghost" onClick={handleCheckoutBack}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <DrawerTitle>
-              {checkoutStep === "review" ? "Revisar carrinho" : "Pagamento"}
-            </DrawerTitle>
-          </DrawerHeader>
+      {isMobile ? (
+        <Drawer
+          open={checkout}
+          onOpenChange={(o) => {
+            if (!o) setStep("cart");
+          }}
+        >
+          <DrawerContent className="h-screen">
+            <DrawerHeader className="flex-row items-center gap-2 shrink-0 px-4 md:px-6">
+              <Button size="icon" variant="ghost" onClick={handleCheckoutBack}>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <DrawerTitle>
+                {checkoutStep === "review" ? "Revisar carrinho" : "Pagamento"}
+              </DrawerTitle>
+            </DrawerHeader>
 
-          <div className="flex min-h-0 flex-1 flex-col px-4 pb-6 md:px-6">
-            <div className="mb-3 shrink-0 rounded-xl border border-border bg-card p-3 text-sm">
-              <div className="font-medium">{client?.name}</div>
-              <div className="text-xs text-muted-foreground">
-                {items.length} item{items.length === 1 ? "" : "s"} ·{" "}
-                {currency(total)}
+            <div className="flex min-h-0 flex-1 flex-col px-4 pb-6 md:px-6">
+              <div className="mb-3 shrink-0 rounded-xl border border-border bg-card p-3 text-sm">
+                <div className="font-medium">{client?.name}</div>
+                <div className="text-xs text-muted-foreground">
+                  {items.length} item{items.length === 1 ? "" : "s"} ·{" "}
+                  {currency(total)}
+                </div>
               </div>
-            </div>
 
-            {checkoutStep === "review" ? (
-              <>
-                {items.length === 0 ? (
-                  <div className="mb-4 rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                    Carrinho vazio.
+              {checkoutStep === "review" ? (
+                <>
+                  {items.length === 0 ? (
+                    <div className="mb-4 rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                      Carrinho vazio.
+                    </div>
+                  ) : (
+                    <div className="min-h-0 flex-1 mb-4">
+                      <ScrollArea className="h-full **:data-radix-scroll-area-thumb:hidden">
+                        <div className="space-y-2 pr-3 pb-4 p-0.5">
+                          {items.map((it) => (
+                            <Card key={it.productId} className="border-border/70">
+                              <CardContent className="flex items-center gap-3 p-3">
+                                <div className="min-w-0 flex-1">
+                                  <div className="truncate text-sm font-medium">
+                                    {it.productName}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {currency(it.unitPrice)} ·{" "}
+                                    {currency(it.unitPrice * it.quantity)}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    size="icon"
+                                    variant="outline"
+                                    className="h-8 w-8"
+                                    onClick={() =>
+                                      updateQty(it.productId, it.quantity - 1)
+                                    }
+                                  >
+                                    <Minus className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <div className="w-7 text-center text-sm font-medium tabular-nums">
+                                    {it.quantity}
+                                  </div>
+                                  <Button
+                                    size="icon"
+                                    variant="outline"
+                                    className="h-8 w-8"
+                                    onClick={() =>
+                                      updateQty(it.productId, it.quantity + 1)
+                                    }
+                                  >
+                                    <Plus className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8 text-destructive"
+                                    onClick={() => removeItem(it.productId)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </div>
+                  )}
+                  <div className="shrink-0">
+                    <Button
+                      onClick={() => setStep("payment")}
+                      size="lg"
+                      className="w-full rounded-full"
+                      disabled={items.length === 0}
+                    >
+                      Avançar para pagamento · {currency(total)}
+                    </Button>
                   </div>
-                ) : (
-                  <div className="min-h-0 flex-1 mb-4">
-                    <ScrollArea className="h-full **:data-radix-scroll-area-thumb:hidden">
-                      <div className="space-y-2 pr-3 pb-4 p-0.5">
+                </>
+              ) : (
+                <>
+                  <div className="min-h-0 flex-1 mb-3">
+                    <ScrollArea className="h-full **:data-radix-scroll-area-thumb:hidden pr-2">
+                      <div className="space-y-1 pr-2">
                         {items.map((it) => (
-                          <Card key={it.productId} className="border-border/70">
-                            <CardContent className="flex items-center gap-3 p-3">
-                              <div className="min-w-0 flex-1">
-                                <div className="truncate text-sm font-medium">
-                                  {it.productName}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {currency(it.unitPrice)} ·{" "}
-                                  {currency(it.unitPrice * it.quantity)}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  size="icon"
-                                  variant="outline"
-                                  className="h-8 w-8"
-                                  onClick={() =>
-                                    updateQty(it.productId, it.quantity - 1)
-                                  }
-                                >
-                                  <Minus className="h-3.5 w-3.5" />
-                                </Button>
-                                <div className="w-7 text-center text-sm font-medium tabular-nums">
-                                  {it.quantity}
-                                </div>
-                                <Button
-                                  size="icon"
-                                  variant="outline"
-                                  className="h-8 w-8"
-                                  onClick={() =>
-                                    updateQty(it.productId, it.quantity + 1)
-                                  }
-                                >
-                                  <Plus className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-8 w-8 text-destructive"
-                                  onClick={() => removeItem(it.productId)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
+                          <div
+                            key={it.productId}
+                            className="flex items-center justify-between text-sm"
+                          >
+                            <div className="min-w-0 truncate pr-2">
+                              {it.quantity}× {it.productName}
+                            </div>
+                            <div className="font-medium tabular-nums">
+                              {currency(it.unitPrice * it.quantity)}
+                            </div>
+                          </div>
                         ))}
                       </div>
                     </ScrollArea>
                   </div>
-                )}
-                <div className="shrink-0">
-                  <Button
-                    onClick={() => setStep("payment")}
-                    size="lg"
-                    className="w-full rounded-full"
-                    disabled={items.length === 0}
-                  >
-                    Avançar para pagamento · {currency(total)}
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="min-h-0 flex-1 mb-3">
-                  <ScrollArea className="h-full **:data-radix-scroll-area-thumb:hidden pr-2">
-                    <div className="space-y-1 pr-2">
-                      {items.map((it) => (
-                        <div
-                          key={it.productId}
-                          className="flex items-center justify-between text-sm"
+
+                  <div className="mb-3 flex flex-col gap-2">
+                    <Label>Forma de pagamento</Label>
+                    <Select
+                      value={payment}
+                      onValueChange={(v) => setPayment(v as PaymentMethod)}
+                    >
+                      <SelectTrigger className="w-2/5">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(PAYMENT_LABELS).map(([k, v]) => (
+                          <SelectItem key={k} value={k}>
+                            {v}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="mb-3">
+                    <Label>Status</Label>
+                    <div className="mt-1 grid grid-cols-2 gap-2">
+                      {Object.values(SaleStatus).map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => setStatus(s)}
+                          className={cn(
+                            "rounded-xl border px-3 py-2 text-sm font-medium transition",
+                            status === s
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border text-muted-foreground",
+                          )}
                         >
-                          <div className="min-w-0 truncate pr-2">
-                            {it.quantity}× {it.productName}
-                          </div>
-                          <div className="font-medium tabular-nums">
-                            {currency(it.unitPrice * it.quantity)}
-                          </div>
+                          {s === SaleStatus.PAGO ? "Pago" : "Pendente"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {status === SaleStatus.PENDENTE && (
+                    <div className="mb-3 space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+                      <div className="text-sm text-amber-700">
+                        Valor pendente:{" "}
+                        <span className="font-semibold">{currency(total)}</span>
+                      </div>
+                      <div>
+                        <Label>Data prevista</Label>
+                        <Input
+                          type="date"
+                          value={dueDate}
+                          onChange={(e) => setDueDate(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mb-4 flex flex-col gap-2">
+                    <Label>Observações</Label>
+                    <Textarea
+                      rows={2}
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="flex gap-2 pb-4 shrink-0 mt-auto">
+                    <Button
+                      onClick={finalize}
+                      size="lg"
+                      disabled={isFinalizing || !can("nova-venda", "Adicionar")}
+                      className="flex-1 rounded-full"
+                    >
+                      <Check className="mr-2 h-4 w-4" />
+                      {isFinalizing
+                        ? "Salvando..."
+                        : `Confirmar · ${currency(total)}`}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Dialog
+          open={checkout}
+          onOpenChange={(o) => {
+            if (!o) setStep("cart");
+          }}
+        >
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md p-0 flex flex-col gap-0">
+            <DialogHeader className="flex-row items-center gap-2 shrink-0 px-6 pt-6 pb-2">
+              <Button size="icon" variant="ghost" onClick={handleCheckoutBack}>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <DialogTitle className="mt-0 pt-0">
+                {checkoutStep === "review" ? "Revisar carrinho" : "Pagamento"}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="flex min-h-0 flex-1 flex-col px-6 pb-6">
+              <div className="mb-3 shrink-0 rounded-xl border border-border bg-card p-3 text-sm">
+                <div className="font-medium">{client?.name}</div>
+                <div className="text-xs text-muted-foreground">
+                  {items.length} item{items.length === 1 ? "" : "s"} ·{" "}
+                  {currency(total)}
+                </div>
+              </div>
+
+              {checkoutStep === "review" ? (
+                <>
+                  {items.length === 0 ? (
+                    <div className="mb-4 rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                      Carrinho vazio.
+                    </div>
+                  ) : (
+                    <div className="min-h-0 flex-1 mb-4">
+                      <ScrollArea className="h-[40vh] **:data-radix-scroll-area-thumb:hidden">
+                        <div className="space-y-2 pr-3 pb-4 p-0.5">
+                          {items.map((it) => (
+                            <Card key={it.productId} className="border-border/70">
+                              <CardContent className="flex items-center gap-3 p-3">
+                                <div className="min-w-0 flex-1">
+                                  <div className="truncate text-sm font-medium">
+                                    {it.productName}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {currency(it.unitPrice)} ·{" "}
+                                    {currency(it.unitPrice * it.quantity)}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    size="icon"
+                                    variant="outline"
+                                    className="h-8 w-8"
+                                    onClick={() =>
+                                      updateQty(it.productId, it.quantity - 1)
+                                    }
+                                  >
+                                    <Minus className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <div className="w-7 text-center text-sm font-medium tabular-nums">
+                                    {it.quantity}
+                                  </div>
+                                  <Button
+                                    size="icon"
+                                    variant="outline"
+                                    className="h-8 w-8"
+                                    onClick={() =>
+                                      updateQty(it.productId, it.quantity + 1)
+                                    }
+                                  >
+                                    <Plus className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8 text-destructive"
+                                    onClick={() => removeItem(it.productId)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
                         </div>
+                      </ScrollArea>
+                    </div>
+                  )}
+                  <div className="shrink-0 mt-auto pt-4">
+                    <Button
+                      onClick={() => setStep("payment")}
+                      size="lg"
+                      className="w-full rounded-full"
+                      disabled={items.length === 0}
+                    >
+                      Avançar para pagamento · {currency(total)}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="min-h-0 flex-1 mb-3">
+                    <ScrollArea className="max-h-[25vh] **:data-radix-scroll-area-thumb:hidden pr-2">
+                      <div className="space-y-1 pr-2">
+                        {items.map((it) => (
+                          <div
+                            key={it.productId}
+                            className="flex items-center justify-between text-sm"
+                          >
+                            <div className="min-w-0 truncate pr-2">
+                              {it.quantity}× {it.productName}
+                            </div>
+                            <div className="font-medium tabular-nums">
+                              {currency(it.unitPrice * it.quantity)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
+
+                  <div className="mb-3 flex flex-col gap-2">
+                    <Label>Forma de pagamento</Label>
+                    <Select
+                      value={payment}
+                      onValueChange={(v) => setPayment(v as PaymentMethod)}
+                    >
+                      <SelectTrigger className="w-2/5">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(PAYMENT_LABELS).map(([k, v]) => (
+                          <SelectItem key={k} value={k}>
+                            {v}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="mb-3">
+                    <Label>Status</Label>
+                    <div className="mt-1 grid grid-cols-2 gap-2">
+                      {Object.values(SaleStatus).map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => setStatus(s)}
+                          className={cn(
+                            "rounded-xl border px-3 py-2 text-sm font-medium transition",
+                            status === s
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border text-muted-foreground",
+                          )}
+                        >
+                          {s === SaleStatus.PAGO ? "Pago" : "Pendente"}
+                        </button>
                       ))}
                     </div>
-                  </ScrollArea>
-                </div>
-
-                <div className="mb-3 flex flex-col gap-2">
-                  <Label>Forma de pagamento</Label>
-                  <Select
-                    value={payment}
-                    onValueChange={(v) => setPayment(v as PaymentMethod)}
-                  >
-                    <SelectTrigger className="w-2/5">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(PAYMENT_LABELS).map(([k, v]) => (
-                        <SelectItem key={k} value={k}>
-                          {v}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="mb-3">
-                  <Label>Status</Label>
-                  <div className="mt-1 grid grid-cols-2 gap-2">
-                    {Object.values(SaleStatus).map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => setStatus(s)}
-                        className={cn(
-                          "rounded-xl border px-3 py-2 text-sm font-medium transition",
-                          status === s
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-border text-muted-foreground",
-                        )}
-                      >
-                        {s === SaleStatus.PAGO ? "Pago" : "Pendente"}
-                      </button>
-                    ))}
                   </div>
-                </div>
 
-                {status === SaleStatus.PENDENTE && (
-                  <div className="mb-3 space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
-                    <div className="text-sm text-amber-700">
-                      Valor pendente:{" "}
-                      <span className="font-semibold">{currency(total)}</span>
+                  {status === SaleStatus.PENDENTE && (
+                    <div className="mb-3 space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+                      <div className="text-sm text-amber-700">
+                        Valor pendente:{" "}
+                        <span className="font-semibold">{currency(total)}</span>
+                      </div>
+                      <div>
+                        <Label>Data prevista</Label>
+                        <Input
+                          type="date"
+                          value={dueDate}
+                          onChange={(e) => setDueDate(e.target.value)}
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <Label>Data prevista</Label>
-                      <Input
-                        type="date"
-                        value={dueDate}
-                        onChange={(e) => setDueDate(e.target.value)}
-                      />
-                    </div>
+                  )}
+
+                  <div className="mb-4 flex flex-col gap-2">
+                    <Label>Observações</Label>
+                    <Textarea
+                      rows={2}
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                    />
                   </div>
-                )}
 
-                <div className="mb-4 flex flex-col gap-2">
-                  <Label>Observações</Label>
-                  <Textarea
-                    rows={2}
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                  />
-                </div>
-
-                <div className="flex gap-2 pb-4 shrink-0 mt-auto">
-                  <Button
-                    onClick={finalize}
-                    size="lg"
-                    disabled={isFinalizing}
-                    className="flex-1 rounded-full"
-                  >
-                    <Check className="mr-2 h-4 w-4" />
-                    {isFinalizing
-                      ? "Salvando..."
-                      : `Confirmar · ${currency(total)}`}
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
-        </DrawerContent>
-      </Drawer>
+                  <div className="flex gap-2 shrink-0 mt-auto pt-2">
+                    <Button
+                      onClick={finalize}
+                      size="lg"
+                      disabled={isFinalizing || !can("nova-venda", "Adicionar")}
+                      className="flex-1 rounded-full"
+                    >
+                      <Check className="mr-2 h-4 w-4" />
+                      {isFinalizing
+                        ? "Salvando..."
+                        : `Confirmar · ${currency(total)}`}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

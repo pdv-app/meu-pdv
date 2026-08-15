@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     const senhaValida = await bcrypt.compare(password, user.password);
 
     if (!senhaValida) {
-      return NextResponse.json({ error: "Senha inválidos." }, { status: 401 });
+      return NextResponse.json({ error: "Senha incorreta." }, { status: 401 });
     }
 
     if (!user.active) {
@@ -79,9 +79,15 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, user: payload });
   } catch (error: any) {
+    if (error.name === "ZodError") {
+      return NextResponse.json(
+        { error: error.issues[0].message },
+        { status: 400 },
+      );
+    }
     return NextResponse.json(
-      { error: error.message || "Erro interno ao realizar login." },
-      { status: 400 },
+      { error: "Erro interno ao realizar login." },
+      { status: 500 },
     );
   }
 }

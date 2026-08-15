@@ -13,7 +13,18 @@ export async function apiRequest<T>(
   });
 
   if (!response.ok) {
-    throw new Error("Erro ao comunicar com o servidor.");
+    let errorMessage = "Erro ao comunicar com o servidor.";
+    try {
+      const errorData = await response.json();
+      if (errorData && errorData.error) {
+        errorMessage = errorData.error;
+      } else if (errorData && errorData.message) {
+        errorMessage = errorData.message;
+      }
+    } catch {
+      // Falha ao fazer parse do JSON, mantem o erro padrão
+    }
+    throw new Error(errorMessage);
   }
 
   if (response.status === 204) {

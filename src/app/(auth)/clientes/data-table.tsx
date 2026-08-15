@@ -29,10 +29,12 @@ export function ClientsDataTable({
   columns,
   data,
   onCreateClick,
+  canAdd,
 }: {
   columns: ColumnDef<ClientTableData>[];
   data: ClientTableData[];
   onCreateClick: () => void;
+  canAdd?: boolean;
 }) {
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -81,9 +83,11 @@ export function ClientsDataTable({
             className="rounded-xl pl-9"
           />
         </div>
-        <Button onClick={onCreateClick} size="sm" className="rounded-full">
-          <Plus className="mr-1 h-4 w-4" /> Novo
-        </Button>
+        {canAdd !== false && (
+          <Button onClick={onCreateClick} size="sm" className="rounded-full">
+            <Plus className="mr-1 h-4 w-4" /> Novo
+          </Button>
+        )}
       </div>
 
       <Card className="border-border/70 p-0">

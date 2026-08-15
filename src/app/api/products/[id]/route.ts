@@ -41,8 +41,7 @@ export async function PATCH(
     if (!validation.success) {
       return NextResponse.json(
         {
-          error: "Dados de validação incorretos",
-          details: validation.error.flatten().fieldErrors,
+          error: "Dados inválidos: " + validation.error.issues[0].message,
         },
         { status: 400 },
       );

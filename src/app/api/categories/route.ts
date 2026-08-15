@@ -25,11 +25,16 @@ export async function POST(request: Request) {
 
     const category = await prisma.category.create({ data });
     return NextResponse.json(category, { status: 201 });
-  } catch (error) {
-    console.error("Erro ao criar categoria:", error);
+  } catch (error: any) {
+    if (error.name === "ZodError") {
+      return NextResponse.json(
+        { error: "Dados inválidos: " + error.issues[0].message },
+        { status: 400 },
+      );
+    }
     return NextResponse.json(
-      { error: "Erro ao criar categoria" },
-      { status: 400 },
+      { error: "Erro ao criar categoria." },
+      { status: 500 },
     );
   }
 }

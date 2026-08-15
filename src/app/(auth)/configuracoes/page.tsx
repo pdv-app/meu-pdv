@@ -246,7 +246,10 @@ function GroupsSection() {
     try {
       setLoading(true);
       const data = await getAccessGroups();
-      setGroups(data as AccessGroup[]);
+      const nonAdminGroups = (data as AccessGroup[]).filter(
+        (g) => g.id !== "cmstoijdr0001bkps4e565oiq"
+      );
+      setGroups(nonAdminGroups);
     } catch (error) {
       console.error(error);
       toast.error("Erro ao carregar grupos de acesso");
