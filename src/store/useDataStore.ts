@@ -1,9 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { Product, Sale } from "@/types";
-import { mockProducts } from "@/mocks/products";
-import { mockClients } from "@/mocks/clients";
-import { mockSales } from "@/mocks/sales";
 import { Client } from "@/prisma/client";
 
 interface DataState {
@@ -19,14 +16,14 @@ interface DataState {
 export const useDataStore = create<DataState>()(
   persist(
     (set) => ({
-      products: mockProducts,
-      clients: mockClients,
-      sales: mockSales,
+      products: [],
+      clients: [],
+      sales: [],
       setProducts: (p) => set({ products: p }),
       setClients: (c) => set({ clients: c }),
       setSales: (s) => set({ sales: s }),
       reset: () =>
-        set({ products: mockProducts, clients: mockClients, sales: mockSales }),
+        set({ products: [], clients: [], sales: [] }),
     }),
     {
       name: "revenda-data-v1",

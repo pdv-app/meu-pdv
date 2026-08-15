@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { PWAUpdater } from "@/components/pwa-updater";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -13,6 +14,11 @@ export const metadata: Metadata = {
   title: "Zelo",
   description:
     "Sistema de controle de vendas e estoque para pequenos negócios.",
+  manifest: "/site.webmanifest?v=2",
+  icons: {
+    icon: "/favicon.ico?v=2",
+    apple: "/apple-touch-icon.png?v=2",
+  },
 };
 
 export default function RootLayout({
@@ -30,6 +36,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
+          <PWAUpdater />
           <Toaster position="top-right" richColors />
         </ThemeProvider>
       </body>
