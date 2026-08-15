@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Receipt } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Receipt, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -12,16 +13,34 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { SaleVoucher } from "@/components/sale-voucher";
-import { useDataStore } from "@/store/useDataStore";
 import { useVouchersStore, voucherCode } from "@/store/useVouchersStore";
 import { currency, dateTime } from "@/lib/format";
 import { PAYMENT_LABELS, type Sale } from "@/types";
+import { salesService } from "@/services/sales.service";
 import { getSaleColumns } from "./columns";
 import { SalesDataTable } from "./data-table";
 
 export default function HistoricoPage() {
-  const sales = useDataStore((s) => s.sales);
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const addVoucher = useVouchersStore((s) => s.addVoucher);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setIsLoading(true);
+        const fetchedSales = await salesService.list();
+        setSales(fetchedSales);
+      } catch (error) {
+        toast.error("Erro ao carregar o histórico de vendas.");
+        console.error("Erro ao carregar vendas:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadData();
+  }, []);
 
   // Ordena as vendas da mais recente para a mais antiga
   const sortedSales = useMemo(() => {
@@ -54,8 +73,17 @@ export default function HistoricoPage() {
     [],
   );
 
+  if (isLoading) {
+    return (
+      <div className="flex h-[60vh] w-full flex-col items-center justify-center gap-4 text-muted-foreground">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm font-medium">Carregando histórico de vendas...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full px-4">
+    <div className="w-full px-4 py-6">
       <SalesDataTable columns={columns} data={sortedSales} />
 
       {/* Modal de Detalhes da Venda */}
