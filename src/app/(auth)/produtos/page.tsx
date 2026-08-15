@@ -164,6 +164,9 @@ export default function ProdutosPage() {
         }
         isEdit={!!editing}
         categories={categories}
+        onCategoryCreated={(newCat) =>
+          setCategories((prev) => [...prev, newCat].sort((a, b) => (a.name || "").localeCompare(b.name || "")))
+        }
         onSubmit={async (data) => {
           try {
             if (editing) {
@@ -375,10 +378,14 @@ function ProductForm({
   isEdit: boolean;
   categories: Category[];
   onSubmit: (data: FormState) => Promise<void>;
+  onCategoryCreated: (category: Category) => void;
 }) {
   const isMobile = useIsMobile();
   const [form, setForm] = useState<FormState>(initial);
   const [busy, setBusy] = useState(false);
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [creatingCategoryBusy, setCreatingCategoryBusy] = useState(false);
 
   // Atualização segura para aceitar string temporariamente no input e converter para número
   const updateNumber = (k: keyof FormState, v: string) => {
@@ -400,24 +407,90 @@ function ProductForm({
       </div>
 
       <div className="sm:col-span-2 space-y-2">
-        <Label>Categoria</Label>
-        <Select
-          value={form.categoryId}
-          onValueChange={(value) => updateString("categoryId", value as string)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione uma categoria">
-              {categories.find((c) => c.id === form.categoryId)?.name}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {categories.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center justify-between">
+          <Label>Categoria</Label>
+          {!isCreatingCategory && (
+            <Button
+              variant="link"
+              className="h-auto p-0 text-xs text-primary"
+              onClick={() => setIsCreatingCategory(true)}
+            >
+              + Nova categoria
+            </Button>
+          )}
+        </div>
+        {isCreatingCategory ? (
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="Nome da categoria"
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              disabled={creatingCategoryBusy}
+            />
+            <Button
+              size="sm"
+              disabled={!newCategoryName.trim() || creatingCategoryBusy}
+              onClick={async () => {
+                setCreatingCategoryBusy(true);
+                try {
+                  const newCat = (await categoriesService.create({
+                    name: newCategoryName.trim(),
+                  })) as any;
+                  
+                  if (!newCat || typeof newCat !== "object") {
+                    throw new Error("Resposta inválida do servidor");
+                  }
+                  
+                  // Tenta extrair a categoria caso venha envelopada (ex: { data: category })
+                  const categoryToUse = newCat.id ? newCat : (newCat.data?.id ? newCat.data : newCat);
+
+                  if (!categoryToUse.id) {
+                    throw new Error("ID da categoria não retornado");
+                  }
+
+                  onCategoryCreated(categoryToUse);
+                  updateString("categoryId", String(categoryToUse.id));
+                  setIsCreatingCategory(false);
+                  setNewCategoryName("");
+                  toast.success("Categoria criada!");
+                } catch (e) {
+                  console.error("Detailed error creating category:", e);
+                  const msg = e instanceof Error ? e.message : "Erro desconhecido ao criar categoria";
+                  toast.error(`Erro ao criar categoria: ${msg}`);
+                } finally {
+                  setCreatingCategoryBusy(false);
+                }
+              }}
+            >
+              {creatingCategoryBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setIsCreatingCategory(false)}
+            >
+              Cancelar
+            </Button>
+          </div>
+        ) : (
+          <Select
+            value={form.categoryId}
+            onValueChange={(value) => updateString("categoryId", value as string)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione uma categoria">
+                {categories.find((c) => c.id === form.categoryId)?.name}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       <div className="sm:col-span-2 space-y-2">
