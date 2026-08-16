@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { hash } from "bcrypt";
 import { z } from "zod";
+import { getCurrentUser } from "@/lib/auth";
 
 const userSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -13,7 +14,11 @@ const userSchema = z.object({
 
 export async function GET() {
   try {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
     const users = await prisma.user.findMany({
+      where: { lojaId: user.lojaId },
       include: { group: true },
       orderBy: { createdAt: "desc" },
     });
@@ -29,6 +34,9 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
     const body = await request.json();
     const data = userSchema.parse(body);
 
@@ -52,6 +60,7 @@ export async function POST(request: Request) {
         password: hashedPassword,
         groupId: data.groupId,
         active: data.active,
+        lojaId: currentUser.lojaId,
       },
       include: { group: true },
     });

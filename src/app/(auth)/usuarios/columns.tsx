@@ -12,6 +12,7 @@ import { AppUser } from "./page";
 
 export type UserTableData = AppUser & {
   groupLabel: string;
+  isFirstUser: boolean;
 };
 
 export type UserActions = {
@@ -79,18 +80,20 @@ export function getUserColumns({
                       Trocar senha
                     </Button>
                     <Separator className="my-1" />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-start h-9 px-3 text-destructive hover:text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete(u);
-                      }}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Remover usuário
-                    </Button>
+                    {!u.isFirstUser && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start h-9 px-3 text-destructive hover:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete(u);
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Remover usuário
+                      </Button>
+                    )}
                   </PopoverContent>
                 </Popover>
               </div>
@@ -163,15 +166,17 @@ export function getUserColumns({
             >
               <Key className="h-4 w-4" />
             </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-8 w-8 text-destructive"
-              onClick={() => onDelete(u)}
-              title="Remover usuário"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            {!u.isFirstUser && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 text-destructive"
+                onClick={() => onDelete(u)}
+                title="Remover usuário"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         );
       },

@@ -247,7 +247,7 @@ function GroupsSection() {
       setLoading(true);
       const data = await getAccessGroups();
       const nonAdminGroups = (data as AccessGroup[]).filter(
-        (g) => g.id !== "cmstoijdr0001bkps4e565oiq"
+        (g) => g.name !== "ADMIN"
       );
       setGroups(nonAdminGroups);
     } catch (error) {

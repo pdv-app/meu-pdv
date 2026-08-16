@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
 
 export async function GET() {
   try {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
     const groups = await prisma.accessGroup.findMany({
+      where: { lojaId: user.lojaId },
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json(groups);
@@ -28,12 +33,16 @@ export async function POST(request: Request) {
       );
     }
 
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
     const group = await prisma.accessGroup.create({
       data: {
         name,
         description,
         active: active ?? true,
         permissions: permissions ?? {},
+        lojaId: user.lojaId,
       },
     });
 

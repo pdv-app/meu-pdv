@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { categorySchema } from "../../../lib/validations/product";
 import prisma from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
 
 export async function GET() {
   try {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
     const categories = await prisma.category.findMany({
-      where: { active: true },
+      where: { active: true, lojaId: user.lojaId },
       orderBy: { name: "asc" },
     });
     return NextResponse.json(categories);
@@ -20,10 +24,15 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
     const body = await request.json();
     const data = categorySchema.parse(body);
 
-    const category = await prisma.category.create({ data });
+    const category = await prisma.category.create({ 
+      data: { ...data, lojaId: user.lojaId } 
+    });
     return NextResponse.json(category, { status: 201 });
   } catch (error: any) {
     if (error.name === "ZodError") {

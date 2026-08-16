@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { hash } from "bcrypt";
 import prisma from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
 
 const updateUserSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório").optional(),
@@ -20,6 +21,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
     const { id } = await params;
     const body = await request.json();
     const data = updateUserSchema.parse(body);
@@ -33,7 +37,7 @@ export async function PATCH(
     }
 
     const user = await prisma.user.update({
-      where: { id },
+      where: { id, lojaId: currentUser.lojaId },
       data: updateData,
       include: { group: true },
     });
@@ -62,8 +66,21 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
     const { id } = await params;
-    await prisma.user.delete({ where: { id } });
+
+    const firstUser = await prisma.user.findFirst({
+      where: { lojaId: currentUser.lojaId },
+      orderBy: { createdAt: "asc" },
+    });
+
+    if (firstUser && firstUser.id === id) {
+      return NextResponse.json({ error: "O primeiro usuário da loja não pode ser deletado." }, { status: 403 });
+    }
+
+    await prisma.user.delete({ where: { id, lojaId: currentUser.lojaId } });
     return NextResponse.json({ message: "Usuário deletado com sucesso" });
   } catch (error) {
     console.error("Erro ao deletar usuário:", error);

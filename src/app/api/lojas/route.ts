@@ -27,7 +27,41 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const loja = await prisma.loja.create({
-      data: body,
+      data: {
+        ...body,
+        accessGroups: {
+          create: {
+            name: "ADMIN",
+            description: "Acesso total ao sistema",
+            permissions: {
+              "clientes": [
+                "Visualizar",
+                "Adicionar",
+                "Editar",
+                "Excluir"
+              ],
+              "produtos": [
+                "Visualizar",
+                "Adicionar",
+                "Editar",
+                "Excluir"
+              ],
+              "dashboard": [
+                "Visualizar"
+              ],
+              "historico": [
+                "Visualizar",
+                "Editar",
+                "Excluir"
+              ],
+              "nova-venda": [
+                "Visualizar",
+                "Adicionar"
+              ]
+            }
+          }
+        }
+      },
     });
 
     return NextResponse.json(loja);

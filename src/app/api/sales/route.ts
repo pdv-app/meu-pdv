@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma"; // Ajuste o caminho do seu prisma se necessário
 import { saleSchema } from "@/lib/validations/sale";
+import { getCurrentUser } from "@/lib/auth";
 
 export async function GET() {
   try {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
     const sales = await prisma.sale.findMany({
+      where: { lojaId: user.lojaId },
       include: {
         items: true,
       },
@@ -21,6 +26,9 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
     const body = await req.json();
 
     // Validação com Zod
@@ -31,6 +39,7 @@ export async function POST(req: Request) {
       // 1. Cria a venda e os itens da venda
       const newSale = await tx.sale.create({
         data: {
+          lojaId: user.lojaId,
           clientId: parsed.clientId,
           clientName: parsed.clientName,
           total: parsed.total,

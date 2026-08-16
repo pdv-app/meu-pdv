@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../src/prisma"
 }
 
@@ -31,6 +31,13 @@ model Loja {
 
   address Address[]
 
+  users        User[]
+  accessGroups AccessGroup[]
+  clients      Client[]
+  categories   Category[]
+  products     Product[]
+  sales        Sale[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -45,33 +52,42 @@ model Address {
   state        String?
   zipCode      String?
 
+  lojaId String
+  loja   Loja   @relation(fields: [lojaId], references: [id], onDelete: Cascade)
+
   userId String?
-  user   User?   @relation(fields: [userId], references: [id])
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   clientId String?
-  client   Client? @relation(fields: [clientId], references: [id])
-
-  lojaId String?
-  loja   Loja?   @relation(fields: [lojaId], references: [id])
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([lojaId])
+  @@index([userId])
+  @@index([clientId])
   @@index([city])
   @@index([state])
 }
 
 model AccessGroup {
   id          String  @id @default(cuid())
-  name        String  @unique
+  name        String
   description String?
   active      Boolean @default(true)
   permissions Json
+
+  lojaId String
+  loja   Loja   @relation(fields: [lojaId], references: [id], onDelete: Cascade)
 
   users User[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([lojaId, name])
+  @@index([lojaId])
 }
 
 model User {
@@ -84,6 +100,9 @@ model User {
   active    Boolean   @default(true)
   lastLogin DateTime?
 
+  lojaId String
+  loja   Loja   @relation(fields: [lojaId], references: [id], onDelete: Cascade)
+
   groupId String
   group   AccessGroup @relation(fields: [groupId], references: [id], onDelete: Restrict)
 
@@ -94,14 +113,21 @@ model User {
   updatedAt DateTime @updatedAt
 
   @@index([name])
+  @@index([lojaId])
+  @@index([groupId])
+  @@index([lojaId, name])
 }
 
 model Client {
-  id      String    @id @default(cuid())
+  id      String  @id @default(cuid())
   name    String
   phone   String
   email   String?
   notes   String?
+
+  lojaId String
+  loja   Loja   @relation(fields: [lojaId], references: [id], onDelete: Cascade)
+
   address Address[]
 
   sales Sale[]
@@ -109,27 +135,38 @@ model Client {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([lojaId])
   @@index([name])
+  @@index([lojaId, name])
 }
 
 model Category {
   id     String  @id @default(cuid())
-  name   String  @unique
+  name   String
   active Boolean @default(true)
+
+  lojaId String
+  loja   Loja   @relation(fields: [lojaId], references: [id], onDelete: Cascade)
 
   products Product[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([lojaId, name])
+  @@index([lojaId])
 }
 
 model Product {
   id   String  @id @default(cuid())
-  code String? @unique
+  code String?
   name String
 
+  lojaId String
+  loja   Loja   @relation(fields: [lojaId], references: [id], onDelete: Cascade)
+
   categoryId String
-  category   Category @relation(fields: [categoryId], references: [id])
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
   description String?
   image       String?
@@ -144,8 +181,12 @@ model Product {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([lojaId, code])
+  @@index([lojaId])
   @@index([name])
+  @@index([lojaId, name])
   @@index([categoryId])
+  @@index([lojaId, categoryId])
 }
 
 model Sale {
@@ -157,23 +198,29 @@ model Sale {
   dueDate       DateTime?
   notes         String?
 
+  lojaId String
+  loja   Loja   @relation(fields: [lojaId], references: [id], onDelete: Cascade)
+
   clientId String?
-  client   Client? @relation(fields: [clientId], references: [id])
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
   clientName String?
 
   sellerId String?
-  seller   User?   @relation(fields: [sellerId], references: [id])
+  seller   User?   @relation(fields: [sellerId], references: [id], onDelete: SetNull)
 
   items SaleItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([lojaId])
   @@index([date])
   @@index([status])
   @@index([clientId])
   @@index([sellerId])
+  @@index([lojaId, date])
+  @@index([lojaId, status])
 }
 
 model SaleItem {
@@ -185,7 +232,7 @@ model SaleItem {
 
   sale Sale @relation(fields: [saleId], references: [id], onDelete: Cascade)
 
-  product Product @relation(fields: [productId], references: [id])
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
 
   @@id([saleId, productId])
   @@index([productId])

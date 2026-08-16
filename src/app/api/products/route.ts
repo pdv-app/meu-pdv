@@ -12,6 +12,7 @@ export async function GET() {
 
   try {
     const products = await prisma.product.findMany({
+      where: { lojaId: auth.user.lojaId },
       include: { category: true },
       orderBy: { name: "asc" },
     });
@@ -49,6 +50,7 @@ export async function POST(request: Request) {
         ...data,
         costPrice: data.costPrice,
         salePrice: data.salePrice,
+        lojaId: auth.user.lojaId,
       },
       include: {
         category: true,

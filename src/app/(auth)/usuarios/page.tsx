@@ -62,6 +62,7 @@ export type AppUser = {
   createdAt?: string | Date;
   updatedAt?: string | Date;
   group?: AccessGroupDTO;
+  isFirstUser?: boolean;
 };
 
 interface FormData {
@@ -135,9 +136,18 @@ export default function UsuariosPage() {
   const enrichedUsers = useMemo<UserTableData[]>(() => {
     const groupMap = Object.fromEntries(groups.map((g) => [g.id || "", g]));
 
+    // Find the oldest user by createdAt
+    const oldestUser = users.reduce((oldest, current) => {
+      if (!oldest) return current;
+      const oldestDate = new Date(oldest.createdAt || 0);
+      const currentDate = new Date(current.createdAt || 0);
+      return currentDate < oldestDate ? current : oldest;
+    }, null as AppUser | null);
+
     return users.map((u) => ({
       ...u,
       groupLabel: u.group?.name ?? groupMap[u.groupId]?.name ?? "—",
+      isFirstUser: oldestUser?.id === u.id,
     }));
   }, [users, groups]);
 
@@ -247,8 +257,8 @@ function UserForm({
 
   const selectableGroups = useMemo(() => {
     return groups.filter((g) => {
-      if (g.id === "cmstoijdr0001bkps4e565oiq") {
-        return initial?.id === "cmstoiwnv0002bkps83yl0i4p";
+      if (g.name === "ADMIN") {
+        return !!initial?.isFirstUser;
       }
       return true;
     });

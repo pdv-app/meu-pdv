@@ -12,6 +12,7 @@ export interface AuthenticatedUser {
   active: boolean;
   groupId: string | null;
   permissions: Permissions;
+  lojaId: string;
 }
 
 export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
@@ -53,6 +54,7 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
       active: user.active,
       groupId: user.groupId,
       permissions: user.group.permissions as unknown as Permissions,
+      lojaId: user.lojaId,
     };
   } catch (error) {
     console.error("Erro ao obter usuário autenticado:", error);

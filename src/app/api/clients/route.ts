@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
 
 // [GET] /api/clients - Lista todos os clientes com seus endereços
 export async function GET() {
   try {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
     const clients = await prisma.client.findMany({
+      where: { lojaId: user.lojaId },
       include: {
         address: true, // Inclui o endereço relacionado
       },
@@ -36,12 +41,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
     const newClient = await prisma.client.create({
       data: {
         name,
         phone,
         email,
         notes,
+        lojaId: user.lojaId,
         address: address
           ? {
               create: {
@@ -52,6 +61,7 @@ export async function POST(req: NextRequest) {
                 city: address.city || "",
                 state: address.state || "",
                 zipCode: address.zipCode || "",
+                lojaId: user.lojaId,
               },
             }
           : undefined,
