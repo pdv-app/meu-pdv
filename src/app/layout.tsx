@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -21,13 +21,28 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: [
+    {
+      media: "(prefers-color-scheme: dark)",
+      color: "#0a0a0a",
+    },
+    {
+      media: "(prefers-color-scheme: light)",
+      color: "#ffffff",
+    },
+  ],
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-br">
+    <html lang="pt-br" suppressHydrationWarning>
       <body className={`${inter.variable} antialiased`}>
         <ThemeProvider
           attribute="class"
