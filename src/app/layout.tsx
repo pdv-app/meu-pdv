@@ -20,6 +20,11 @@ export const metadata: Metadata = {
     icon: "/favicon.ico?v=2",
     apple: "/apple-touch-icon.png?v=2",
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Zelo",
+  },
 };
 
 export const viewport: Viewport = {

@@ -12,7 +12,7 @@ export function BottomNavigation() {
     to === "/" ? pathname === "/" : pathname.startsWith(to);
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/80 backdrop-blur-lg md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 bg-background md:hidden">
       <div className="mx-auto grid max-w-lg grid-cols-5 pb-[max(env(safe-area-inset-bottom),0.25rem)] pt-1">
         {NAV.map((n) => {
           const Icon = n.icon;
