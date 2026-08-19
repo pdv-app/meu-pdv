@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PWAUpdater } from "@/components/pwa-updater";
+import { ThemeColorUpdater } from "@/components/theme-color-updater";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -24,16 +25,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: [
-    {
-      media: "(prefers-color-scheme: dark)",
-      color: "#0a0a0a",
-    },
-    {
-      media: "(prefers-color-scheme: light)",
-      color: "#ffffff",
-    },
-  ],
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -52,6 +44,7 @@ export default function RootLayout({
         >
           {children}
           <PWAUpdater />
+          <ThemeColorUpdater />
           <Toaster position="top-right" richColors />
         </ThemeProvider>
       </body>
