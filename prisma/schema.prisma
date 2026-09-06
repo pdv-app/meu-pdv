@@ -29,7 +29,8 @@ model Loja {
   logo      String?
   active    Boolean @default(true)
 
-  address      Address[]
+  address Address[]
+
   users        User[]
   accessGroups AccessGroup[]
   clients      Client[]
@@ -37,9 +38,8 @@ model Loja {
   products     Product[]
   sales        Sale[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Address {
@@ -61,13 +61,14 @@ model Address {
   clientId String?
   client   Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([lojaId])
   @@index([userId])
   @@index([clientId])
+  @@index([city])
+  @@index([state])
 }
 
 model AccessGroup {
@@ -82,9 +83,8 @@ model AccessGroup {
 
   users User[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([lojaId, name])
   @@index([lojaId])
@@ -109,20 +109,21 @@ model User {
   address Address[]
   sales   Sale[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
+  @@index([name])
   @@index([lojaId])
   @@index([groupId])
+  @@index([lojaId, name])
 }
 
 model Client {
-  id    String  @id @default(cuid())
-  name  String
-  phone String
-  email String?
-  notes String?
+  id      String  @id @default(cuid())
+  name    String
+  phone   String
+  email   String?
+  notes   String?
 
   lojaId String
   loja   Loja   @relation(fields: [lojaId], references: [id], onDelete: Cascade)
@@ -131,13 +132,12 @@ model Client {
 
   sales Sale[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([lojaId])
-  @@index([lojaId, updatedAt])
-  @@index([lojaId, deletedAt])
+  @@index([name])
+  @@index([lojaId, name])
 }
 
 model Category {
@@ -150,28 +150,17 @@ model Category {
 
   products Product[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([lojaId, name])
   @@index([lojaId])
-  @@index([lojaId, updatedAt])
 }
 
 model Product {
-  id          String  @id @default(cuid())
-  code        String?
-  name        String
-  barcode     String?
-  description String?
-  image       String?
-  unit        String  @default("UN")
-  costPrice   Decimal @default(0.00) @db.Decimal(10, 2)
-  salePrice   Decimal @db.Decimal(10, 2)
-  stock       Decimal @default(0) @db.Decimal(10, 3)
-  minStock    Decimal @default(0) @db.Decimal(10, 3)
-  notes       String?
+  id   String  @id @default(cuid())
+  code String?
+  name String
 
   lojaId String
   loja   Loja   @relation(fields: [lojaId], references: [id], onDelete: Cascade)
@@ -179,17 +168,25 @@ model Product {
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
+  description String?
+  image       String?
+  costPrice   Decimal @db.Decimal(10, 2)
+  salePrice   Decimal @db.Decimal(10, 2)
+  stock       Int
+  minStock    Int
+  notes       String?
+
   sales SaleItem[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([lojaId, code])
   @@index([lojaId])
-  @@index([lojaId, barcode])
-  @@index([lojaId, updatedAt])
-  @@index([lojaId, deletedAt])
+  @@index([name])
+  @@index([lojaId, name])
+  @@index([categoryId])
+  @@index([lojaId, categoryId])
 }
 
 model Sale {
@@ -214,33 +211,29 @@ model Sale {
 
   items SaleItem[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([lojaId])
+  @@index([date])
+  @@index([status])
+  @@index([clientId])
+  @@index([sellerId])
   @@index([lojaId, date])
-  @@index([lojaId, updatedAt])
-  @@index([lojaId, deletedAt])
+  @@index([lojaId, status])
 }
 
 model SaleItem {
-  id          String  @id @default(cuid())
   saleId      String
   productId   String
   productName String
-  quantity    Decimal @db.Decimal(10, 3)
+  quantity    Int
   unitPrice   Decimal @db.Decimal(10, 2)
-  subtotal    Decimal @db.Decimal(10, 2)
 
-  sale    Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  sale Sale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
   product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-
-  @@index([saleId])
+  @@id([saleId, productId])
   @@index([productId])
-  @@index([updatedAt])
 }
