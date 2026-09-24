@@ -150,17 +150,10 @@ export function ProductsDataTable({
 
         <Button
           onClick={onCreateClick}
-          size="lg"
-          className="w-full rounded-full sm:hidden"
-        >
-          <Plus className="mr-2 h-4 w-4" /> Adicionar novo produto
-        </Button>
-        <Button
-          onClick={onCreateClick}
           size="sm"
-          className="rounded-full hidden sm:flex shrink-0"
+          className="rounded-full shrink-0"
         >
-          <Plus className="mr-1 h-4 w-4" /> Novo
+          <Plus className="mr-1 h-4 w-4" /> Adicionar
         </Button>
       </div>
 

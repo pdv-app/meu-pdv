@@ -42,7 +42,8 @@ export async function PATCH(
       include: { group: true },
     });
 
-    const { password, ...safeUser } = user;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _password, ...safeUser } = user;
 
     return NextResponse.json(safeUser);
   } catch (error) {

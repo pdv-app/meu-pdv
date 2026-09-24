@@ -11,7 +11,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ChevronLeft, ChevronRight, Plus, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, ListFilter, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -72,20 +72,31 @@ export function ClientsDataTable({
 
   return (
     <div>
-      <div className="mb-4 flex flex-col sm:justify-between gap-2 sm:flex-row sm:items-center">
-        <div className="relative flex-1 w-full">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome, telefone..."
-            value={globalFilter}
-            onChange={(e) => setGlobalFilter(e.target.value)}
-            autoComplete="off"
-            className="rounded-xl pl-9"
-          />
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center w-full">
+        <div className="flex items-center gap-2 w-full">
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome, telefone..."
+              value={globalFilter}
+              onChange={(e) => setGlobalFilter(e.target.value)}
+              autoComplete="off"
+              className="rounded-xl pl-9"
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            className="rounded-xl shrink-0"
+            aria-label="Filtrar"
+            disabled
+          >
+            <ListFilter className="h-4 w-4" />
+          </Button>
         </div>
         {canAdd !== false && (
-          <Button onClick={onCreateClick} size="sm" className="rounded-full">
-            <Plus className="mr-1 h-4 w-4" /> Novo
+          <Button onClick={onCreateClick} size="sm" className="rounded-full shrink-0">
+            <Plus className="mr-1 h-4 w-4" /> Adicionar
           </Button>
         )}
       </div>

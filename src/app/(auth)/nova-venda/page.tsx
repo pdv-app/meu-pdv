@@ -80,7 +80,7 @@ export default function NovaVenda() {
   // Estado do Carrinho e Fluxo (substitui o useCartStore)
   const [client, setClient] = useState<Client | null>(null);
   const [items, setItems] = useState<CartItem[]>([]);
-  const [step, setStep] = useState<"cart" | "review" | "payment">("cart");
+  const [step, setStep] = useState<"cart" | "payment">("cart");
   const [payment, setPayment] = useState<PaymentMethod>(PaymentMethod.DINHEIRO);
   const [status, setStatus] = useState<SaleStatus>(SaleStatus.PAGO);
   const [dueDate, setDueDate] = useState("");
@@ -90,8 +90,7 @@ export default function NovaVenda() {
   const [clientPicker, setClientPicker] = useState(false);
   const [productPicker, setProductPicker] = useState(false);
 
-  const checkout = step === "review" || step === "payment";
-  const checkoutStep = step === "payment" ? "payment" : "review";
+  const checkout = step === "payment";
 
   // Busca os clientes e produtos ao carregar a página
   useEffect(() => {
@@ -184,11 +183,7 @@ export default function NovaVenda() {
   };
 
   const handleCheckoutBack = () => {
-    if (checkoutStep === "payment") {
-      setStep("review");
-    } else {
-      setStep("cart");
-    }
+    setStep("cart");
   };
 
   const finalize = async () => {
@@ -304,8 +299,8 @@ export default function NovaVenda() {
         </div>
       ) : (
         <div className="max-h-[50vh] flex-1">
-          <ScrollArea className="h-full **:data-radix-scroll-area-thumb:hidden">
-            <div className="space-y-2 p-0.5 pb-4 pr-3">
+          <ScrollArea className="h-full">
+            <div className="space-y-2 p-0.5 pb-4">
               {items.map((it) => (
                 <Card key={it.productId} className="border-border/70">
                   <CardContent className="flex items-center gap-3 p-3">
@@ -368,7 +363,7 @@ export default function NovaVenda() {
           </div>
           <Button
             disabled={!canCheckout}
-            onClick={() => setStep("review")}
+            onClick={() => setStep("payment")}
             size="lg"
             className="rounded-full"
           >
@@ -412,7 +407,7 @@ export default function NovaVenda() {
                 <ArrowLeft className="h-4 w-4" />
               </Button>
               <DrawerTitle>
-                {checkoutStep === "review" ? "Revisar carrinho" : "Pagamento"}
+                Pagamento
               </DrawerTitle>
             </DrawerHeader>
 
@@ -425,84 +420,9 @@ export default function NovaVenda() {
                 </div>
               </div>
 
-              {checkoutStep === "review" ? (
-                <>
-                  {items.length === 0 ? (
-                    <div className="mb-4 rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                      Carrinho vazio.
-                    </div>
-                  ) : (
-                    <div className="min-h-0 flex-1 mb-4">
-                      <ScrollArea className="h-full **:data-radix-scroll-area-thumb:hidden">
-                        <div className="space-y-2 pr-3 pb-4 p-0.5">
-                          {items.map((it) => (
-                            <Card key={it.productId} className="border-border/70">
-                              <CardContent className="flex items-center gap-3 p-3">
-                                <div className="min-w-0 flex-1">
-                                  <div className="truncate text-sm font-medium">
-                                    {it.productName}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {currency(it.unitPrice)} ·{" "}
-                                    {currency(it.unitPrice * it.quantity)}
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <Button
-                                    size="icon"
-                                    variant="outline"
-                                    className="h-8 w-8"
-                                    onClick={() =>
-                                      updateQty(it.productId, it.quantity - 1)
-                                    }
-                                  >
-                                    <Minus className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <div className="w-7 text-center text-sm font-medium tabular-nums">
-                                    {it.quantity}
-                                  </div>
-                                  <Button
-                                    size="icon"
-                                    variant="outline"
-                                    className="h-8 w-8"
-                                    onClick={() =>
-                                      updateQty(it.productId, it.quantity + 1)
-                                    }
-                                  >
-                                    <Plus className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-8 w-8 text-destructive"
-                                    onClick={() => removeItem(it.productId)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    </div>
-                  )}
-                  <div className="shrink-0">
-                    <Button
-                      onClick={() => setStep("payment")}
-                      size="lg"
-                      className="w-full rounded-full"
-                      disabled={items.length === 0}
-                    >
-                      Avançar para pagamento · {currency(total)}
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="min-h-0 flex-1 mb-3">
-                    <ScrollArea className="h-full **:data-radix-scroll-area-thumb:hidden pr-2">
-                      <div className="space-y-1 pr-2">
+              <div className="min-h-0 flex-1 mb-3">
+                    <ScrollArea className="h-full">
+                      <div className="space-y-1">
                         {items.map((it) => (
                           <div
                             key={it.productId}
@@ -598,8 +518,6 @@ export default function NovaVenda() {
                         : `Confirmar · ${currency(total)}`}
                     </Button>
                   </div>
-                </>
-              )}
             </div>
           </DrawerContent>
         </Drawer>
@@ -616,7 +534,7 @@ export default function NovaVenda() {
                 <ArrowLeft className="h-4 w-4" />
               </Button>
               <DialogTitle className="mt-0 pt-0">
-                {checkoutStep === "review" ? "Revisar carrinho" : "Pagamento"}
+                Pagamento
               </DialogTitle>
             </DialogHeader>
 
@@ -629,84 +547,9 @@ export default function NovaVenda() {
                 </div>
               </div>
 
-              {checkoutStep === "review" ? (
-                <>
-                  {items.length === 0 ? (
-                    <div className="mb-4 rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                      Carrinho vazio.
-                    </div>
-                  ) : (
-                    <div className="min-h-0 flex-1 mb-4">
-                      <ScrollArea className="h-[40vh] **:data-radix-scroll-area-thumb:hidden">
-                        <div className="space-y-2 pr-3 pb-4 p-0.5">
-                          {items.map((it) => (
-                            <Card key={it.productId} className="border-border/70">
-                              <CardContent className="flex items-center gap-3 p-3">
-                                <div className="min-w-0 flex-1">
-                                  <div className="truncate text-sm font-medium">
-                                    {it.productName}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {currency(it.unitPrice)} ·{" "}
-                                    {currency(it.unitPrice * it.quantity)}
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <Button
-                                    size="icon"
-                                    variant="outline"
-                                    className="h-8 w-8"
-                                    onClick={() =>
-                                      updateQty(it.productId, it.quantity - 1)
-                                    }
-                                  >
-                                    <Minus className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <div className="w-7 text-center text-sm font-medium tabular-nums">
-                                    {it.quantity}
-                                  </div>
-                                  <Button
-                                    size="icon"
-                                    variant="outline"
-                                    className="h-8 w-8"
-                                    onClick={() =>
-                                      updateQty(it.productId, it.quantity + 1)
-                                    }
-                                  >
-                                    <Plus className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-8 w-8 text-destructive"
-                                    onClick={() => removeItem(it.productId)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    </div>
-                  )}
-                  <div className="shrink-0 mt-auto pt-4">
-                    <Button
-                      onClick={() => setStep("payment")}
-                      size="lg"
-                      className="w-full rounded-full"
-                      disabled={items.length === 0}
-                    >
-                      Avançar para pagamento · {currency(total)}
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="min-h-0 flex-1 mb-3">
-                    <ScrollArea className="max-h-[25vh] **:data-radix-scroll-area-thumb:hidden pr-2">
-                      <div className="space-y-1 pr-2">
+              <div className="min-h-0 flex-1 mb-3">
+                    <ScrollArea className="max-h-[25vh]">
+                      <div className="space-y-1">
                         {items.map((it) => (
                           <div
                             key={it.productId}
@@ -802,8 +645,6 @@ export default function NovaVenda() {
                         : `Confirmar · ${currency(total)}`}
                     </Button>
                   </div>
-                </>
-              )}
             </div>
           </DialogContent>
         </Dialog>

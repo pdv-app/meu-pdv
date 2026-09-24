@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { BadgeCheck, Download, FileText, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { toPng } from "html-to-image";
@@ -20,6 +20,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useSettingsStore } from "@/store/useSettingsStore";
 import { currency, dateTime } from "@/lib/format";
 import { PAYMENT_LABELS, type Sale } from "@/types";
+import { getLoja } from "@/services/loja.service";
 
 interface Props {
   sale: Sale | null;
@@ -34,6 +35,17 @@ export function SaleVoucher({ sale, open, onClose, clientPhone }: Props) {
   const voucher = useSettingsStore((s) => s.voucher);
   const ref = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [storeName, setStoreName] = useState(store.name);
+
+  useEffect(() => {
+    if (open) {
+      getLoja()
+        .then((res) => {
+          if (res?.name) setStoreName(res.name);
+        })
+        .catch(() => {});
+    }
+  }, [open]);
 
   // Otimização: Memoiza o código para não recalcular a cada render
   const code = useMemo(
@@ -165,7 +177,7 @@ export function SaleVoucher({ sale, open, onClose, clientPhone }: Props) {
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
           <BadgeCheck className="h-6 w-6" />
         </div>
-        <div className="mt-2 text-base font-semibold">{store.name}</div>
+        <div className="mt-2 text-base font-semibold">{storeName}</div>
         {voucher.resellerName && (
           <div className="text-xs text-muted-foreground">
             {voucher.resellerName}
@@ -243,7 +255,7 @@ export function SaleVoucher({ sale, open, onClose, clientPhone }: Props) {
       <div className="my-4 border-t border-dashed border-border" />
 
       <div className="flex items-end justify-between">
-        <div className="text-base font-semibold">{store.name}</div>
+        <div className="text-base font-semibold">{storeName}</div>
         <div className="text-xs text-muted-foreground tabular-nums">
           {dateTime(sale.date)}
         </div>
@@ -300,12 +312,12 @@ export function SaleVoucher({ sale, open, onClose, clientPhone }: Props) {
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
-        <DrawerContent className="h-screen">
+        <DrawerContent className="h-screen" tabIndex={0}>
           <DrawerHeader className="shrink-0 px-4">
             <DrawerTitle>Comprovante da venda</DrawerTitle>
           </DrawerHeader>
           <div className="flex min-h-0 flex-1 flex-col px-4 pb-6 overflow-hidden">
-            <ScrollArea className="flex-1 **:data-radix-scroll-area-thumb:hidden">
+            <ScrollArea className="flex-1">
               {VoucherDesign}
               <div className="mt-4">{ActionButtons}</div>
             </ScrollArea>
@@ -318,11 +330,11 @@ export function SaleVoucher({ sale, open, onClose, clientPhone }: Props) {
   // 4. Renderização Desktop (Modal)
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[92vh] overflow-hidden flex flex-col sm:max-w-sm p-0 gap-0">
+      <DialogContent className="max-h-[92vh] overflow-hidden flex flex-col sm:max-w-sm p-0 gap-0" tabIndex={0}>
         <DialogHeader className="sr-only">
           <DialogTitle>Comprovante da venda</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="flex-1 px-6 pt-6 **:data-radix-scroll-area-thumb:hidden">
+        <ScrollArea className="flex-1 px-6 pt-6">
           {VoucherDesign}
           <div className="mt-4 pb-6">{ActionButtons}</div>
         </ScrollArea>

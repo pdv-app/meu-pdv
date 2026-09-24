@@ -144,7 +144,7 @@ export default function ClientDetail({
             <DrawerTitle>{client.name}</DrawerTitle>
           </DrawerHeader>
           <div className="flex min-h-0 flex-1 flex-col px-4 pb-6 overflow-hidden">
-            <ScrollArea className="flex-1 **:data-radix-scroll-area-thumb:hidden">
+            <ScrollArea className="flex-1">
               {DetailContent}
             </ScrollArea>
             {FooterButtons}

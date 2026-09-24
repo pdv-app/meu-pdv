@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import Link from "next/link";
 import { z } from "zod";
 import {
   Drawer,
@@ -176,14 +175,7 @@ export default function UsuariosPage() {
 
   return (
     <div className="w-full px-4">
-      <div className="mb-4 mt-6">
-        <Link
-          href="/configuracoes"
-          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" /> Voltar para Configurações
-        </Link>
-      </div>
+
 
       <UsersDataTable
         columns={columns}
@@ -439,7 +431,7 @@ function UserForm({
             </DrawerTitle>
           </DrawerHeader>
           <div className="flex min-h-0 flex-1 flex-col px-4 pb-6">
-            <ScrollArea className="flex-1 **:data-radix-scroll-area-thumb:hidden">
+            <ScrollArea className="flex-1">
               {FormFields}
             </ScrollArea>
             <div className="shrink-0 pt-4 border-t border-border">

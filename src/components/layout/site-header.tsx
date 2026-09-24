@@ -13,8 +13,10 @@ export function SiteHeader() {
   const isMobile = useIsMobile();
 
   // Função auxiliar para não repetir a lógica de verificação de rota
-  const matchRoute = (item: { to: string }) =>
-    item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
+  const matchRoute = (item: { to: string }) => {
+    if (item.to === "/") return pathname === "/";
+    return pathname.startsWith(item.to);
+  };
 
   // Procura na navegação principal. Se não achar (undefined), procura na secundária.
   // const currentRoute = NAV.find(matchRoute) || SECONDARY_NAV.find(matchRoute);
@@ -24,7 +26,7 @@ export function SiteHeader() {
   const pageTitle = currentRoute?.label || "Página";
 
   return (
-    <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
+    <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear">
       <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
         <div className="hidden items-center gap-2 md:flex">
           <SidebarTrigger className="-ml-1" />
